@@ -1,0 +1,583 @@
+diff --git a/core/java/android/os/storage/IMountService.java b/core/java/android/os/storage/IMountService.java
+index 0640d7e..961b505 100644
+--- a/core/java/android/os/storage/IMountService.java
++++ b/core/java/android/os/storage/IMountService.java
+@@ -24,6 +24,8 @@ import android.os.Parcelable;
+ import android.os.RemoteException;
+ import android.os.storage.StorageVolume;
+ 
++import android.util.Log;
++
+ /**
+  * WARNING! Update IMountService.h and IMountService.cpp if you change this
+  * file. In particular, the ordering of the methods below must match the
+@@ -641,6 +643,120 @@ public interface IMountService extends IInterface {
+                 return _result;
+             }
+ 
++            @Override
++            public int addKeySlot(String password, String keytype) throws RemoteException {
++                Parcel _data = Parcel.obtain();
++                Parcel _reply = Parcel.obtain();
++                int _result;
++                Log.e("IMountService.java", "########## addKeySlot:"+password+" keytype:"+keytype);
++                try {
++                    _data.writeInterfaceToken(DESCRIPTOR);
++                    _data.writeString(password);
++                    _data.writeString(keytype);
++                    mRemote.transact(Stub.TRANSACTION_addKeySlot, _data, _reply, 0);
++                    _reply.readException();
++                    _result = _reply.readInt();
++                } finally {
++                    _reply.recycle();
++                    _data.recycle();
++                }
++                return _result;
++            }
++
++
++           @Override
++           public int removeKeySlot(String slot) throws RemoteException {
++                Parcel _data = Parcel.obtain();
++                Parcel _reply = Parcel.obtain();
++                int _result;
++                Log.e("IMountService.java", "########## removeKeySlot:"+slot);
++                try {
++                    _data.writeInterfaceToken(DESCRIPTOR);
++                    _data.writeString(slot);
++                    mRemote.transact(Stub.TRANSACTION_removeKeySlot, _data, _reply, 0);
++                    _reply.readException();
++                    _result = _reply.readInt();
++                } finally {
++                    _reply.recycle();
++                    _data.recycle();
++                }
++                return _result;
++            }
++
++            @Override
++           public int keySlots() throws RemoteException {
++                Parcel _data = Parcel.obtain();
++                Parcel _reply = Parcel.obtain();
++                int _result;
++                Log.e("IMountService.java", "########## get keySlots");
++                try {
++                    _data.writeInterfaceToken(DESCRIPTOR);
++                    mRemote.transact(Stub.TRANSACTION_keySlots, _data, _reply, 0);
++                    _reply.readException();
++                    _result = _reply.readInt();
++                } finally {
++                    _reply.recycle();
++                    _data.recycle();
++                }
++                return _result;
++            }
++            @Override
++            public int keyTypes() throws RemoteException {
++            	Parcel _data = Parcel.obtain();
++            	Parcel _reply = Parcel.obtain();
++            	int _result;
++            	Log.e("IMountService.java", "########## get keyTypes");
++            	try {
++            		_data.writeInterfaceToken(DESCRIPTOR);
++            		mRemote.transact(Stub.TRANSACTION_keyTypes, _data, _reply, 0);
++            		_reply.readException();
++            		_result = _reply.readInt();
++            	} finally {
++            		_reply.recycle();
++            		_data.recycle();
++            	}
++            	return _result;
++            }
++
++            @Override
++            public String keyDesc(String slot) throws RemoteException {
++                 Parcel _data = Parcel.obtain();
++                 Parcel _reply = Parcel.obtain();
++                 String _result;
++                 Log.e("IMountService.java", "########## keyDesc:"+slot);
++                 try {
++                     _data.writeInterfaceToken(DESCRIPTOR);
++                     _data.writeString(slot);
++                     mRemote.transact(Stub.TRANSACTION_keyDesc, _data, _reply, 0);
++                     _reply.readException();
++                     _result = _reply.readString();
++                 } finally {
++                     _reply.recycle();
++                     _data.recycle();
++                 }
++                 return _result;
++             }
++
++
++           @Override
++           public int changePasswordKeySlot(String passwd, String slot) throws RemoteException {
++                Parcel _data = Parcel.obtain();
++                Parcel _reply = Parcel.obtain();
++                int _result;
++                Log.e("IMountService.java", "########## changePasswordKeySlot:"+passwd+" slot:"+slot);
++                try {
++                    _data.writeInterfaceToken(DESCRIPTOR);
++                    _data.writeStringArray(new String[]{passwd,slot});
++                    mRemote.transact(Stub.TRANSACTION_changePasswordKeySlot, _data, _reply, 0);
++                    _reply.readException();
++                    _result = _reply.readInt();
++                } finally {
++                    _reply.recycle();
++                    _data.recycle();
++                }
++                return _result;
++            }
++
+             public int changeEncryptionPassword(String password) throws RemoteException {
+                 Parcel _data = Parcel.obtain();
+                 Parcel _reply = Parcel.obtain();
+@@ -770,16 +886,24 @@ public interface IMountService extends IInterface {
+         static final int TRANSACTION_decryptStorage = IBinder.FIRST_CALL_TRANSACTION + 26;
+ 
+         static final int TRANSACTION_encryptStorage = IBinder.FIRST_CALL_TRANSACTION + 27;
++        /** Added myself*/
++        static final int TRANSACTION_addKeySlot = IBinder.FIRST_CALL_TRANSACTION + 28;
++        static final int TRANSACTION_removeKeySlot = IBinder.FIRST_CALL_TRANSACTION + 29;
++        static final int TRANSACTION_keySlots = IBinder.FIRST_CALL_TRANSACTION + 30;
++        static final int TRANSACTION_changePasswordKeySlot = IBinder.FIRST_CALL_TRANSACTION + 31;
++        static final int TRANSACTION_keyTypes = IBinder.FIRST_CALL_TRANSACTION + 32;
++        static final int TRANSACTION_keyDesc = IBinder.FIRST_CALL_TRANSACTION + 33;
+ 
+-        static final int TRANSACTION_changeEncryptionPassword = IBinder.FIRST_CALL_TRANSACTION + 28;
++        static final int TRANSACTION_changeEncryptionPassword = IBinder.FIRST_CALL_TRANSACTION + 34;
+ 
+-        static final int TRANSACTION_getVolumeList = IBinder.FIRST_CALL_TRANSACTION + 29;
++        static final int TRANSACTION_getVolumeList = IBinder.FIRST_CALL_TRANSACTION + 35;
+ 
+-        static final int TRANSACTION_getSecureContainerFilesystemPath = IBinder.FIRST_CALL_TRANSACTION + 30;
++        static final int TRANSACTION_getSecureContainerFilesystemPath = IBinder.FIRST_CALL_TRANSACTION + 36;
+ 
+-        static final int TRANSACTION_getEncryptionState = IBinder.FIRST_CALL_TRANSACTION + 31;
++        static final int TRANSACTION_getEncryptionState = IBinder.FIRST_CALL_TRANSACTION + 37;
++
++        static final int TRANSACTION_verifyEncryptionPassword = IBinder.FIRST_CALL_TRANSACTION + 38;
+ 
+-        static final int TRANSACTION_verifyEncryptionPassword = IBinder.FIRST_CALL_TRANSACTION + 32;
+ 
+         /**
+          * Cast an IBinder object into an IMountService interface, generating a
+@@ -1078,6 +1202,60 @@ public interface IMountService extends IInterface {
+                     reply.writeInt(result);
+                     return true;
+                 }
++                case TRANSACTION_addKeySlot: {
++                    data.enforceInterface(DESCRIPTOR);
++                    String password = data.readString();
++                    String keytype = data.readString();
++                    Log.e("IMountService.java", "#########222 addKeySlot:"+password+" type:"+keytype);
++                    int result = addKeySlot(password,keytype);
++                    reply.writeNoException();
++                    reply.writeInt(result);
++                    return true;
++                }
++                case TRANSACTION_removeKeySlot: {
++                    data.enforceInterface(DESCRIPTOR);
++                    String slot = data.readString();
++                    Log.e("IMountService.java", "#########222 removeKeySlot:"+slot);
++                    int result = removeKeySlot(slot);
++                    reply.writeNoException();
++                    reply.writeInt(result);
++                    return true;
++                }
++                case TRANSACTION_keyDesc: {
++                	data.enforceInterface(DESCRIPTOR);
++                	String slot = data.readString();
++                	Log.e("IMountService.java", "#########222 TRANSACTION_keyDesc:"+slot);
++                	String result = keyDesc(slot);
++                	reply.writeNoException();
++                	reply.writeString(result);
++                	return true;
++                }
++                case TRANSACTION_keySlots: {
++                    data.enforceInterface(DESCRIPTOR);
++                    Log.e("IMountService.java", "#########222 get keySlots");
++                    int result = keySlots();
++                    reply.writeNoException();
++                    reply.writeInt(result);
++                    return true;
++                }
++                case TRANSACTION_keyTypes: {
++                	data.enforceInterface(DESCRIPTOR);
++                	Log.e("IMountService.java", "#########222 get keyTypes");
++                	int result = keyTypes();
++                	reply.writeNoException();
++                	reply.writeInt(result);
++                	return true;
++                }
++                case TRANSACTION_changePasswordKeySlot: {
++                    data.enforceInterface(DESCRIPTOR);
++                    String[] slots = data.readStringArray();
++                    Log.e("IMountService.java", "#########222 changePasswordKeySlot");
++                    int result = changePasswordKeySlot(slots[0],slots[1]);
++                    reply.writeNoException();
++                    reply.writeInt(result);
++                    return true;
++                }
++
+                 case TRANSACTION_changeEncryptionPassword: {
+                     data.enforceInterface(DESCRIPTOR);
+                     String password = data.readString();
+@@ -1305,6 +1483,22 @@ public interface IMountService extends IInterface {
+      */
+     public int changeEncryptionPassword(String password) throws RemoteException;
+ 
++
++    public static String KEYSLOT_TYPE_TEXT_PIN = "1";
++    public static String KEYSLOT_TYPE_PATTERN = "2";
++    public static String KEYSLOT_TYPE_NFC_ID = "3";
++    public static String KEYSLOT_TYPE_NFC_MIFARE_CLASSIC = "4";
++    public static String KEYSLOT_TYPE_NFC_MIFARE_DESFIRE = "5";
++	/**
++     * Add Keyslot with password
++     */
++    public int addKeySlot(String password, String desc) throws RemoteException;
++    public int removeKeySlot(String slot) throws RemoteException;
++    public int keySlots() throws RemoteException;
++    public int keyTypes() throws RemoteException;
++    public int changePasswordKeySlot(String passwd, String slot) throws RemoteException;
++    public String keyDesc(String slot) throws RemoteException;
++
+     /**
+      * Verify the encryption password against the stored volume.  This method
+      * may only be called by the system process.
+diff --git a/include/storage/IMountService.h b/include/storage/IMountService.h
+index 43df7f0..17a9393 100644
+--- a/include/storage/IMountService.h
++++ b/include/storage/IMountService.h
+@@ -68,6 +68,14 @@ public:
+     virtual bool getMountedObbPath(const String16& filename, String16& path) = 0;
+     virtual int32_t decryptStorage(const String16& password) = 0;
+     virtual int32_t encryptStorage(const String16& password) = 0;
++
++    virtual int32_t addKeySlot(const String16& password, const String16& keytype) = 0;//
++    virtual int32_t removeKeySlot(const String16& slot) = 0;//
++    virtual int32_t keySlots() = 0;//
++    virtual int32_t keyTypes() = 0;//
++    virtual String16 keyDesc(const String16& slot) = 0;//
++    virtual int32_t changePasswordKeySlot(const String16& password, const String16& slot) = 0;//
++
+ };
+ 
+ // ----------------------------------------------------------------------------
+diff --git a/libs/storage/IMountService.cpp b/libs/storage/IMountService.cpp
+index 8ddbeae..908e50a 100644
+--- a/libs/storage/IMountService.cpp
++++ b/libs/storage/IMountService.cpp
+@@ -50,6 +50,12 @@ enum {
+     TRANSACTION_isExternalStorageEmulated,
+     TRANSACTION_decryptStorage,
+     TRANSACTION_encryptStorage,
++    TRANSACTION_addKeySlot,
++    TRANSACTION_removeKeySlot,
++    TRANSACTION_keySlots,
++    TRANSACTION_changePasswordKeySlot,
++    TRANSACTION_keyTypes,
++    TRANSACTION_keyDesc,
+ };
+ 
+ class BpMountService: public BpInterface<IMountService>
+@@ -541,6 +547,110 @@ public:
+         }
+         return reply.readInt32();
+     }
++
++    int32_t addKeySlot(const String16& password, const String16& keytype)
++    {
++        Parcel data, reply;
++        LOGD("##########  IMountService.cpp addKeySlot: sss");
++        data.writeInterfaceToken(IMountService::getInterfaceDescriptor());
++        data.writeString16(password);
++        data.writeString16(keytype);
++        if (remote()->transact(TRANSACTION_addKeySlot, data, &reply) != NO_ERROR) {
++            LOGD("encryptStorage addKeySlot could not contact remote\n");
++            return -1;
++        }
++        int32_t err = reply.readExceptionCode();
++        if (err < 0) {
++            LOGD("addKeySlot caught exception %d\n", err);
++            return err;
++        }
++        return reply.readInt32();
++    }
++
++    String16 keyDesc(const String16& slot)
++	{
++		Parcel data, reply;
++		LOGD("##########  IMountService.cpp keyDesc");
++		data.writeInterfaceToken(IMountService::getInterfaceDescriptor());
++		data.writeString16(slot);
++		if (remote()->transact(TRANSACTION_keyDesc, data, &reply) != NO_ERROR) {
++			LOGD("encryptStorage removeKeySlot could not contact remote\n");
++			return slot;
++		}
++
++		return reply.readString16();
++	}
++
++    int32_t removeKeySlot(const String16& slot)
++    {
++        Parcel data, reply;
++        LOGD("##########  IMountService.cpp removeKeySlot");
++        data.writeInterfaceToken(IMountService::getInterfaceDescriptor());
++        data.writeString16(slot);
++        if (remote()->transact(TRANSACTION_removeKeySlot, data, &reply) != NO_ERROR) {
++            LOGD("encryptStorage removeKeySlot could not contact remote\n");
++            return -1;
++        }
++        int32_t err = reply.readExceptionCode();
++        if (err < 0) {
++            LOGD("removeKeySlot caught exception %d\n", err);
++            return err;
++        }
++        return reply.readInt32();
++    }
++
++    int32_t keySlots()
++    {
++        Parcel data, reply;
++        LOGD("##########  IMountService.cpp keySlots");
++        data.writeInterfaceToken(IMountService::getInterfaceDescriptor());
++        if (remote()->transact(TRANSACTION_keySlots, data, &reply) != NO_ERROR) {
++            LOGD("encryptStorage keySlots could not contact remote\n");
++            return -1;
++        }
++        int32_t err = reply.readExceptionCode();
++        if (err < 0) {
++            LOGD("keySlots caught exception %d\n", err);
++            return err;
++        }
++        return reply.readInt32();
++    }
++
++    int32_t keyTypes()
++    {
++        Parcel data, reply;
++        LOGD("##########  IMountService.cpp keyTypes");
++        data.writeInterfaceToken(IMountService::getInterfaceDescriptor());
++        if (remote()->transact(TRANSACTION_keyTypes, data, &reply) != NO_ERROR) {
++            LOGD("encryptStorage keyTypes could not contact remote\n");
++            return -1;
++        }
++        int32_t err = reply.readExceptionCode();
++        if (err < 0) {
++            LOGD("keySlots caught exception %d\n", err);
++            return err;
++        }
++        return reply.readInt32();
++    }
++
++    int32_t changePasswordKeySlot(const String16& passwd, const String16& slot)
++    {
++        Parcel data, reply;
++        LOGD("##########  IMountService.cpp changePasswordKeySlot");
++        data.writeInterfaceToken(IMountService::getInterfaceDescriptor());
++        data.writeString16(passwd);
++        data.writeString16(slot);
++        if (remote()->transact(TRANSACTION_changePasswordKeySlot, data, &reply) != NO_ERROR) {
++            LOGD("encryptStorage changePasswordKeySlot could not contact remote\n");
++            return -1;
++        }
++        int32_t err = reply.readExceptionCode();
++        if (err < 0) {
++            LOGD("changePasswordKeySlot caught exception %d\n", err);
++            return err;
++        }
++        return reply.readInt32();
++    }
+ };
+ 
+ IMPLEMENT_META_INTERFACE(MountService, "IMountService");
+diff --git a/services/java/com/android/server/MountService.java b/services/java/com/android/server/MountService.java
+index 1f16b86..15211c3 100644
+--- a/services/java/com/android/server/MountService.java
++++ b/services/java/com/android/server/MountService.java
+@@ -1965,6 +1965,183 @@ class MountService extends IMountService.Stub
+         return 0;
+     }
+ 
++    public String keyDesc(String keyslot) throws RemoteException {
++        if (keyslot == null || TextUtils.isEmpty(keyslot)) {
++        	throw new IllegalArgumentException("keyslot needs to be greater than 0:"+keyslot);
++        }
++
++        mContext.enforceCallingOrSelfPermission(Manifest.permission.CRYPT_KEEPER,
++            "no permission to access the crypt keeper");
++
++        waitForReady();
++
++        if (DEBUG_EVENTS) {
++            Slog.i(TAG, "getDesc...");
++        }
++
++        try {
++            ArrayList<String> response = mConnector.doCommand("cryptfs desc " + keyslot);
++            StringBuilder sb = new StringBuilder();
++            for (int i = 0; i < response.size(); i++) {
++				sb.append(response.get(i)+" ");
++				Slog.i(TAG, "response "+i+": "+response.get(i));
++			}
++            return sb.toString();
++        } catch (NativeDaemonConnectorException e) {
++            // Encryption failed
++            return null;
++        }
++    }
++
++     public int addKeySlot(String password, String keytype) throws RemoteException {
++        if (TextUtils.isEmpty(password)) {
++            throw new IllegalArgumentException("password cannot be empty for new keyslot:"+password);
++        }
++        if (keytype == null || TextUtils.isEmpty(keytype)) {
++        	throw new IllegalArgumentException("keytype needs to be greater than 0:"+keytype);
++        }
++
++        mContext.enforceCallingOrSelfPermission(Manifest.permission.CRYPT_KEEPER,
++            "no permission to access the crypt keeper");
++
++        waitForReady();
++
++        if (DEBUG_EVENTS) {
++            Slog.i(TAG, "add cryptfskeyslot...");
++        }
++
++        try {
++        	Slog.i(TAG, "cryptfs addkeyslot " + password+" "+keytype);
++            ArrayList<String> response = mConnector.doCommand("cryptfs addkeyslot " + password+" "+keytype);
++
++            String[] tokens = response.get(0).split(" ");
++
++            if (tokens == null || tokens.length != 2) {
++                return -1;
++            }
++
++            return Integer.parseInt(tokens[1]);
++        } catch (NativeDaemonConnectorException e) {
++            // Encryption failed
++            return e.getCode();
++        }
++    }
++
++    public int removeKeySlot(String slot) throws RemoteException {
++        if (TextUtils.isEmpty(slot)) {
++            throw new IllegalArgumentException("removeKeySlot: slot cannot be empty:"+slot);
++        }
++
++        mContext.enforceCallingOrSelfPermission(Manifest.permission.CRYPT_KEEPER,
++            "no permission to access the crypt keeper");
++
++        waitForReady();
++
++        if (DEBUG_EVENTS) {
++            Slog.i(TAG, "add removeKeySlot...");
++        }
++
++        try {
++            ArrayList<String> response = mConnector.doCommand("cryptfs removekeyslot " + slot);
++
++            String[] tokens = response.get(0).split(" ");
++
++            if (tokens == null || tokens.length != 2) {
++                return -1;
++            }
++
++            return Integer.parseInt(tokens[1]);
++        } catch (NativeDaemonConnectorException e) {
++            // Encryption failed
++            return e.getCode();
++        }
++    }
++
++    public int keySlots() throws RemoteException {
++        mContext.enforceCallingOrSelfPermission(Manifest.permission.CRYPT_KEEPER,
++            "no permission to access the crypt keeper");
++
++        waitForReady();
++
++        if (DEBUG_EVENTS) {
++            Slog.i(TAG, "get keyslots...");
++        }
++
++        try {
++            ArrayList<String> response = mConnector.doCommand("cryptfs keyslots");
++
++            String[] tokens = response.get(0).split(" ");
++
++            if (tokens == null || tokens.length != 2) {
++                return -1;
++            }
++
++            return Integer.parseInt(tokens[1]);
++        } catch (NativeDaemonConnectorException e) {
++            // Encryption failed
++            return e.getCode();
++        }
++    }
++
++    public int keyTypes() throws RemoteException {
++    	mContext.enforceCallingOrSelfPermission(Manifest.permission.CRYPT_KEEPER,
++    			"no permission to access the crypt keeper");
++
++    	waitForReady();
++
++    	if (DEBUG_EVENTS) {
++    		Slog.i(TAG, "get keyTypes...");
++    	}
++
++    	try {
++    		ArrayList<String> response = mConnector.doCommand("cryptfs keyTypes");
++
++    		String[] tokens = response.get(0).split(" ");
++
++    		if (tokens == null || tokens.length != 2) {
++    			return -1;
++    		}
++
++    		return Integer.parseInt(tokens[1]);
++    	} catch (NativeDaemonConnectorException e) {
++    		// Encryption failed
++    		return e.getCode();
++    	}
++    }
++
++    public int changePasswordKeySlot(String passwd, String slot) throws RemoteException {
++        if (TextUtils.isEmpty(slot)) {
++            throw new IllegalArgumentException("changePasswordKeySlot: slot cannot be empty:"+slot);
++        }
++        if (TextUtils.isEmpty(passwd)) {
++            throw new IllegalArgumentException("changePasswordKeySlot: passwd cannot be empty:"+passwd);
++        }
++
++        mContext.enforceCallingOrSelfPermission(Manifest.permission.CRYPT_KEEPER,
++            "no permission to access the crypt keeper");
++
++        waitForReady();
++
++        if (DEBUG_EVENTS) {
++            Slog.i(TAG, "add removeKeySlot...");
++        }
++
++        try {
++            ArrayList<String> response = mConnector.doCommand("cryptfs changepwslots " +passwd+" "+slot);
++
++            String[] tokens = response.get(0).split(" ");
++
++            if (tokens == null || tokens.length != 2) {
++                return -1;
++            }
++
++            return Integer.parseInt(tokens[1]);
++        } catch (NativeDaemonConnectorException e) {
++            // Encryption failed
++            return e.getCode();
++        }
++    }
++
+     public int changeEncryptionPassword(String password) {
+         if (TextUtils.isEmpty(password)) {
+             throw new IllegalArgumentException("password cannot be empty");

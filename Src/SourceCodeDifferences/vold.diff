@@ -1,0 +1,1028 @@
+diff --git a/CommandListener.cpp b/CommandListener.cpp
+index 97ed2ce..dcaf5ab 100644
+--- a/CommandListener.cpp
++++ b/CommandListener.cpp
+@@ -543,10 +543,64 @@ int CommandListener::CryptfsCmd::runCommand(SocketClient *cli,
+         if (argc != 3) {
+             cli->sendMsg(ResponseCode::CommandSyntaxError, "Usage: cryptfs changepw <newpasswd>", false);
+             return 0;
+-        } 
++        }
+         SLOGD("cryptfs changepw {}");
+         rc = cryptfs_changepw(argv[2]);
+-    } else if (!strcmp(argv[1], "verifypw")) {
++    }
++
++    else if (!strcmp(argv[1], "addkeyslot")) {
++        if (argc != 4) {
++            cli->sendMsg(ResponseCode::CommandSyntaxError, "Usage: cryptfs addkeyslot <newpasswd> <type>", false);
++            return 0;
++        }
++        SLOGD("cryptfs addkeyslot {}");
++        rc = cryptfs_add_key_slot(argv[2], argv[3]);
++    }
++    else if (!strcmp(argv[1], "removekeyslot")) {
++        if (argc != 3) {
++            cli->sendMsg(ResponseCode::CommandSyntaxError, "Usage: cryptfs remove <nr>", false);
++            return 0;
++        }
++        SLOGD("cryptfs removekeyslot {}");
++        rc = cryptfs_remove_key_slot(argv[2]);
++    }
++    else if (!strcmp(argv[1], "keyslots")) {
++        if (argc != 2) {
++            cli->sendMsg(ResponseCode::CommandSyntaxError, "Usage: cryptfs keyslots", false);
++            return 0;
++        }
++        SLOGD("cryptfs keyslots {}");
++        rc = cryptfs_key_slots();
++    }
++    else if (!strcmp(argv[1], "keytypes")) {
++        if (argc != 2) {
++            cli->sendMsg(ResponseCode::CommandSyntaxError, "Usage: cryptfs keytypes", false);
++            return 0;
++        }
++        SLOGD("cryptfs keytypes {}");
++        rc = cryptfs_get_key_types();
++    }
++    else if (!strcmp(argv[1], "desc")) {
++		if (argc != 3) {
++			cli->sendMsg(ResponseCode::CommandSyntaxError, "Usage: cryptfs desc <nr>", false);
++			return 0;
++		}
++		SLOGD("cryptfs keytypes {}");
++		char msg[255];
++		rc = cryptfs_get_desc(atoi(argv[2]), msg);
++		//snprintf(msg, sizeof(msg), "%d", rc);
++		cli->sendMsg(ResponseCode::CommandOkay, msg, false);
++		return 0;
++    }
++    else if (!strcmp(argv[1], "changepwslots")) {
++        if (argc != 4) {
++            cli->sendMsg(ResponseCode::CommandSyntaxError, "Usage: cryptfs changepwslots <pw> <slow>", false);
++            return 0;
++        }
++        SLOGD("cryptfs changepwslots {}");
++        rc = cryptfs_changepw_for_slot(argv[2],argv[3]);
++    }
++    else if (!strcmp(argv[1], "verifypw")) {
+         if (argc != 3) {
+             cli->sendMsg(ResponseCode::CommandSyntaxError, "Usage: cryptfs verifypw <passwd>", false);
+             return 0;
+diff --git a/cryptfs.c b/cryptfs.c
+index 052c033..61a3677 100644
+--- a/cryptfs.c
++++ b/cryptfs.c
+@@ -17,7 +17,9 @@
+ /* TO DO:
+  *   1.  Perhaps keep several copies of the encrypted key, in case something
+  *       goes horribly wrong?
+- *
++ *   Changes from Sebastian.Hoebarth@fh-hagenberg.at
++ *   Added Keyslots int footer struct and compairs key to all available
++ *   keyslots. In addition key slots can be added and deleted.
+  */
+ 
+ #include <sys/types.h>
+@@ -125,7 +127,7 @@ static unsigned int get_blkdev_size(int fd)
+  * update the failed mount count but not change the key.
+  */
+ static int put_crypt_ftr_and_key(char *real_blk_name, struct crypt_mnt_ftr *crypt_ftr,
+-                                  unsigned char *key, unsigned char *salt)
++                                  unsigned char *key, unsigned char *salt, int key_slot)
+ {
+   int fd;
+   unsigned int nr_sec, cnt;
+@@ -175,11 +177,28 @@ static int put_crypt_ftr_and_key(char *real_blk_name, struct crypt_mnt_ftr *cryp
+     goto errout;
+   }
+ 
++  /* move to key slot*/
++  if(key_slot != 0)
++  {
++    int seek = (KEY_LEN_BYTES+KEY_TO_SALT_PADDING+SALT_LEN+KEY_SLOT_PADDING)*key_slot;
++    SLOGE("KEY PUT: Seek to keyslot: %d @byte: %d\n", key_slot, seek);
++    /** Seek from current to*/
++    if (lseek64(fd, ((KEY_LEN_BYTES+KEY_TO_SALT_PADDING+SALT_LEN+KEY_SLOT_PADDING)*key_slot), SEEK_CUR) == -1) {
++      SLOGE("KEY PUT: Cannot seek to keyslot \n");
++      goto errout;
++    }
++  }
++  else
++  {
++    SLOGE("KEY PUT: Do not need to seek to keyslot: %d\n",key_slot);
++  }
++
++  /* save key */
+   if (key) {
+     if (crypt_ftr->keysize != KEY_LEN_BYTES) {
+       SLOGE("Keysize of %d bits not supported for real block device %s\n",
+             crypt_ftr->keysize*8, fname);
+-      goto errout; 
++      goto errout;
+     }
+ 
+     if ( (cnt = write(fd, key, crypt_ftr->keysize)) != crypt_ftr->keysize) {
+@@ -188,6 +207,7 @@ static int put_crypt_ftr_and_key(char *real_blk_name, struct crypt_mnt_ftr *cryp
+     }
+   }
+ 
++  /* save salt*/
+   if (salt) {
+     /* Compute the offset from the last write to the salt */
+     off = KEY_TO_SALT_PADDING;
+@@ -199,6 +219,7 @@ static int put_crypt_ftr_and_key(char *real_blk_name, struct crypt_mnt_ftr *cryp
+       goto errout;
+     }
+ 
++    /** Write salt*/
+     if ( (cnt = write(fd, salt, SALT_LEN)) != SALT_LEN) {
+       SLOGE("Cannot write salt for real block device %s\n", fname);
+       goto errout;
+@@ -223,8 +244,124 @@ errout:
+ 
+ }
+ 
+-static int get_crypt_ftr_and_key(char *real_blk_name, struct crypt_mnt_ftr *crypt_ftr,
+-                                  unsigned char *key, unsigned char *salt)
++/* Save crypto key info, between key and salt
++ */
++static int put_crypt_desc(char *real_blk_name, struct crypt_mnt_ftr *crypt_ftr,
++						  unsigned char *key, unsigned char *salt, int key_slot,
++						  unsigned char *desc, unsigned int desc_length)
++{
++  int fd;
++  unsigned int nr_sec, cnt;
++  off64_t off;
++  int rc = -1;
++  char *fname;
++  char key_loc[PROPERTY_VALUE_MAX];
++  struct stat statbuf;
++
++  property_get(KEY_LOC_PROP, key_loc, KEY_IN_FOOTER);
++
++  if (!strcmp(key_loc, KEY_IN_FOOTER)) {
++    fname = real_blk_name;
++    if ( (fd = open(fname, O_RDWR)) < 0) {
++      SLOGE("Cannot open real block device %s\n", fname);
++      return -1;
++    }
++
++    if ( (nr_sec = get_blkdev_size(fd)) == 0) {
++      SLOGE("Cannot get size of block device %s\n", fname);
++      goto errout;
++    }
++
++    /* If it's an encrypted Android partition, the last 16 Kbytes contain the
++     * encryption info footer and key, and plenty of bytes to spare for future
++     * growth.
++     */
++    off = ((off64_t)nr_sec * 512) - CRYPT_FOOTER_OFFSET;
++
++    if (lseek64(fd, off, SEEK_SET) == -1) {
++      SLOGE("Cannot seek to real block device footer\n");
++      goto errout;
++    }
++  } else if (key_loc[0] == '/') {
++    fname = key_loc;
++    if ( (fd = open(fname, O_RDWR | O_CREAT, 0600)) < 0) {
++      SLOGE("Cannot open footer file %s\n", fname);
++      return -1;
++    }
++  } else {
++    SLOGE("Unexpected value for" KEY_LOC_PROP "\n");
++    return -1;;
++  }
++
++  if ((cnt = write(fd, crypt_ftr, sizeof(struct crypt_mnt_ftr))) != sizeof(struct crypt_mnt_ftr)) {
++    SLOGE("Cannot write real block device footer\n");
++    goto errout;
++  }
++
++  /* move to key slot*/
++  if(key_slot != 0)
++  {
++    int seek = (KEY_LEN_BYTES+KEY_TO_SALT_PADDING+SALT_LEN+KEY_SLOT_PADDING)*key_slot;
++    SLOGE("KEY PUT: Seek to keyslot: %d @byte: %d\n", key_slot, seek);
++    /** Seek from current to*/
++    if (lseek64(fd, ((KEY_LEN_BYTES+KEY_TO_SALT_PADDING+SALT_LEN+KEY_SLOT_PADDING)*key_slot), SEEK_CUR) == -1) {
++      SLOGE("KEY PUT: Cannot seek to keyslot \n");
++      goto errout;
++    }
++  }
++  else
++  {
++    SLOGE("KEY PUT: Do not need to seek to keyslot: %d\n",key_slot);
++  }
++
++  /* save crypto desc*/
++  if (desc) {
++    /* Compute the offset from key if needed */
++     off += crypt_ftr->keysize;
++
++    if (lseek64(fd, off, SEEK_CUR) == -1) {
++      SLOGE("Cannot seek to real block device salt \n");
++      goto errout;
++    }
++
++    if(desc_length > KEY_TO_SALT_PADDING)
++    {
++    	SLOGE("Crypt description is to long! \n");
++    	goto errout;
++    }
++
++    /** Write crypto desc*/
++    if ( (cnt = write(fd, desc, desc_length)) != desc_length) {
++      SLOGE("Cannot write crypto desc for real block device %s\n", fname);
++      goto errout;
++    }
++    else
++    {
++    	SLOGE("Crypto desc description stored in block device %s\n", fname);
++    }
++  }
++
++  fstat(fd, &statbuf);
++  /* If the keys are kept on a raw block device, do not try to truncate it. */
++  if (S_ISREG(statbuf.st_mode) && (key_loc[0] == '/')) {
++    if (ftruncate(fd, 0x4000)) {
++      SLOGE("Cannot set footer file size\n", fname);
++      goto errout;
++    }
++  }
++
++  /* Success! */
++  rc = 0;
++
++errout:
++  close(fd);
++  return rc;
++
++}
++
++static int get_crypt_desc(char *real_blk_name, struct crypt_mnt_ftr *crypt_ftr,
++                          unsigned char *key, unsigned char *salt, int key_slot,
++                          unsigned char *desc)
+ {
+   int fd;
+   unsigned int nr_sec, cnt;
+@@ -313,6 +450,221 @@ static int get_crypt_ftr_and_key(char *real_blk_name, struct crypt_mnt_ftr *cryp
+     goto errout;
+   }
+ 
++  /* move to key slot*/
++  if(key_slot != 0)
++  {
++    int seek = (KEY_LEN_BYTES+KEY_TO_SALT_PADDING+SALT_LEN+KEY_SLOT_PADDING)*key_slot;
++    SLOGE("GET KEY: Seek to keyslot: %d @byte: %d\n", key_slot, seek);
++    /** Seek from current to*/
++    if (lseek64(fd, ((KEY_LEN_BYTES+KEY_TO_SALT_PADDING+SALT_LEN+KEY_SLOT_PADDING)*key_slot), SEEK_CUR) == -1) {
++      SLOGE("Cannot seek to keyslot in GET\n");
++      goto errout;
++    }
++  }
++  else
++  {
++    SLOGE("GET KEY: Do not need to seek to keyslot: %d\n",key_slot);
++  }
++
++  /** Read key from disc*/
++  if ( (cnt = read(fd, key, crypt_ftr->keysize)) != crypt_ftr->keysize) {
++    SLOGE("Cannot read key for real block device %s\n", fname);
++    goto errout;
++  }
++
++  /** Read desc from disc*/
++  if ( (cnt = read(fd, desc, KEY_TO_SALT_PADDING)) != KEY_TO_SALT_PADDING) {
++      SLOGE("Cannot read crypto desc for real block device %s\n", fname);
++      goto errout;
++  }
++
++  /** Read salt from disc*/
++  if ( (cnt = read(fd, salt, SALT_LEN)) != SALT_LEN) {
++    SLOGE("Cannot read salt for real block device %s\n", fname);
++    goto errout;
++  }
++
++  /* Success! */
++  rc = 0;
++
++errout:
++  close(fd);
++  return rc;
++}
++
++
++static int get_crypt_ftr(char *real_blk_name, struct crypt_mnt_ftr *crypt_ftr)
++{
++  int fd;
++  unsigned int nr_sec, cnt;
++  off64_t off;
++  int rc = -1;
++  char key_loc[PROPERTY_VALUE_MAX];
++  char *fname;
++  struct stat statbuf;
++
++  property_get(KEY_LOC_PROP, key_loc, KEY_IN_FOOTER);
++
++  if (!strcmp(key_loc, KEY_IN_FOOTER)) {
++    fname = real_blk_name;
++    if ( (fd = open(fname, O_RDONLY)) < 0) {
++      SLOGE("Cannot open real block device %s\n", fname);
++      return -1;
++    }
++
++    if ( (nr_sec = get_blkdev_size(fd)) == 0) {
++      SLOGE("Cannot get size of block device %s\n", fname);
++      goto errout;
++    }
++
++    /* If it's an encrypted Android partition, the last 16 Kbytes contain the
++     * encryption info footer and key, and plenty of bytes to spare for future
++     * growth.
++     */
++    off = ((off64_t)nr_sec * 512) - CRYPT_FOOTER_OFFSET;
++
++    if (lseek64(fd, off, SEEK_SET) == -1) {
++      SLOGE("Cannot seek to real block device footer\n");
++      goto errout;
++    }
++  } else if (key_loc[0] == '/') {
++    fname = key_loc;
++    if ( (fd = open(fname, O_RDONLY)) < 0) {
++      SLOGE("Cannot open footer file %s\n", fname);
++      return -1;
++    }
++
++    /* Make sure it's 16 Kbytes in length */
++    fstat(fd, &statbuf);
++    if (S_ISREG(statbuf.st_mode) && (statbuf.st_size != 0x4000)) {
++      SLOGE("footer file %s is not the expected size!\n", fname);
++      goto errout;
++    }
++  } else {
++    SLOGE("Unexpected value for" KEY_LOC_PROP "\n");
++    return -1;
++  }
++
++  if ( (cnt = read(fd, crypt_ftr, sizeof(struct crypt_mnt_ftr))) != sizeof(struct crypt_mnt_ftr)) {
++    SLOGE("Cannot read real block device footer\n");
++    goto errout;
++  }
++
++  /* Success! */
++  rc = 0;
++
++errout:
++  close(fd);
++  return rc;
++}
++
++static int get_crypt_ftr_and_key(char *real_blk_name, struct crypt_mnt_ftr *crypt_ftr,
++                                  unsigned char *key, unsigned char *salt, int key_slot)
++{
++  int fd;
++  unsigned int nr_sec, cnt;
++  off64_t off;
++  int rc = -1;
++  char key_loc[PROPERTY_VALUE_MAX];
++  char *fname;
++  struct stat statbuf;
++
++  property_get(KEY_LOC_PROP, key_loc, KEY_IN_FOOTER);
++
++  if (!strcmp(key_loc, KEY_IN_FOOTER)) {
++    fname = real_blk_name;
++    if ( (fd = open(fname, O_RDONLY)) < 0) {
++      SLOGE("Cannot open real block device %s\n", fname);
++      return -1;
++    }
++
++    if ( (nr_sec = get_blkdev_size(fd)) == 0) {
++      SLOGE("Cannot get size of block device %s\n", fname);
++      goto errout;
++    }
++
++    /* If it's an encrypted Android partition, the last 16 Kbytes contain the
++     * encryption info footer and key, and plenty of bytes to spare for future
++     * growth.
++     */
++    off = ((off64_t)nr_sec * 512) - CRYPT_FOOTER_OFFSET;
++
++    if (lseek64(fd, off, SEEK_SET) == -1) {
++      SLOGE("Cannot seek to real block device footer\n");
++      goto errout;
++    }
++  } else if (key_loc[0] == '/') {
++    fname = key_loc;
++    if ( (fd = open(fname, O_RDONLY)) < 0) {
++      SLOGE("Cannot open footer file %s\n", fname);
++      return -1;
++    }
++
++    /* Make sure it's 16 Kbytes in length */
++    fstat(fd, &statbuf);
++    if (S_ISREG(statbuf.st_mode) && (statbuf.st_size != 0x4000)) {
++      SLOGE("footer file %s is not the expected size!\n", fname);
++      goto errout;
++    }
++  } else {
++    SLOGE("Unexpected value for" KEY_LOC_PROP "\n");
++    return -1;
++  }
++
++  if ( (cnt = read(fd, crypt_ftr, sizeof(struct crypt_mnt_ftr))) != sizeof(struct crypt_mnt_ftr)) {
++    SLOGE("Cannot read real block device footer\n");
++    goto errout;
++  }
++
++  if (crypt_ftr->magic != CRYPT_MNT_MAGIC) {
++    SLOGE("Bad magic for real block device %s\n", fname);
++    goto errout;
++  }
++
++  if (crypt_ftr->major_version != 1) {
++    SLOGE("Cannot understand major version %d real block device footer\n",
++          crypt_ftr->major_version);
++    goto errout;
++  }
++
++  if (crypt_ftr->minor_version != 0) {
++    SLOGW("Warning: crypto footer minor version %d, expected 0, continuing...\n",
++          crypt_ftr->minor_version);
++  }
++
++  if (crypt_ftr->ftr_size > sizeof(struct crypt_mnt_ftr)) {
++    /* the footer size is bigger than we expected.
++     * Skip to it's stated end so we can read the key.
++     */
++    if (lseek(fd, crypt_ftr->ftr_size - sizeof(struct crypt_mnt_ftr),  SEEK_CUR) == -1) {
++      SLOGE("Cannot seek to start of key\n");
++      goto errout;
++    }
++  }
++
++  if (crypt_ftr->keysize != KEY_LEN_BYTES) {
++    SLOGE("Keysize of %d bits not supported for real block device %s\n",
++          crypt_ftr->keysize * 8, fname);
++    goto errout;
++  }
++
++  /* move to key slot*/
++  if(key_slot != 0)
++  {
++    int seek = (KEY_LEN_BYTES+KEY_TO_SALT_PADDING+SALT_LEN+KEY_SLOT_PADDING)*key_slot;
++    SLOGE("GET KEY: Seek to keyslot: %d @byte: %d\n", key_slot, seek);
++    /** Seek from current to*/
++    if (lseek64(fd, ((KEY_LEN_BYTES+KEY_TO_SALT_PADDING+SALT_LEN+KEY_SLOT_PADDING)*key_slot), SEEK_CUR) == -1) {
++      SLOGE("Cannot seek to keyslot in GET\n");
++      goto errout;
++    }
++  }
++  else
++  {
++    SLOGE("GET KEY: Do not need to seek to keyslot: %d\n",key_slot);
++  }
++
++
+   if ( (cnt = read(fd, key, crypt_ftr->keysize)) != crypt_ftr->keysize) {
+     SLOGE("Cannot read key for real block device %s\n", fname);
+     goto errout;
+@@ -480,7 +832,7 @@ static int encrypt_master_key(char *passwd, unsigned char *salt,
+ 
+     /* Turn the password into a key and IV that can decrypt the master key */
+     pbkdf2(passwd, salt, ikey);
+-  
++
+     /* Initialize the decryption engine */
+     if (! EVP_EncryptInit(&e_ctx, EVP_aes_128_cbc(), ikey, ikey+KEY_LEN_BYTES)) {
+         SLOGE("EVP_EncryptInit failed\n");
+@@ -742,7 +1094,7 @@ static int do_crypto_complete(char *mount_point)
+     return -1;
+   }
+ 
+-  if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt)) {
++  if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, 0)) {
+     SLOGE("Error getting crypt footer and key\n");
+     return -1;
+   }
+@@ -784,47 +1136,77 @@ static int test_mount_encrypted_fs(char *passwd, char *mount_point, char *label)
+     return -1;
+   }
+ 
+-  if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt)) {
+-    SLOGE("Error getting crypt footer and key\n");
+-    return -1;
++  if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, 0)) {
++      SLOGE("Error getting crypt footer and key\n");
++      return -1;
+   }
+ 
+-  SLOGD("crypt_ftr->fs_size = %lld\n", crypt_ftr.fs_size);
+-  orig_failed_decrypt_count = crypt_ftr.failed_decrypt_count;
++  /* try it with all keyslots*/
++  if(crypt_ftr.nr_of_key_slots <= 0)
++	  crypt_ftr.nr_of_key_slots = 1;
++
++  int slots = crypt_ftr.nr_of_key_slots-1;
++  while(slots>=0)
++  {
++    SLOGE("test_mount_encrypted_fs-> try to unlock with slot:%d\n", slots);
++
++    if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, slots)) {
++      SLOGE("Error getting crypt footer and key for slot:%d\n", slots);
++      return -1;
++    }
+ 
+-  if (! (crypt_ftr.flags & CRYPT_MNT_KEY_UNENCRYPTED) ) {
+-    decrypt_master_key(passwd, salt, encrypted_master_key, decrypted_master_key);
++    SLOGD("crypt_ftr->fs_size = %lld\n", crypt_ftr.fs_size);
++    orig_failed_decrypt_count = crypt_ftr.failed_decrypt_count;
++
++    if (! (crypt_ftr.flags & CRYPT_MNT_KEY_UNENCRYPTED) ) {
++      decrypt_master_key(passwd, salt, encrypted_master_key, decrypted_master_key);
++    }
++
++    if (create_crypto_blk_dev(&crypt_ftr, decrypted_master_key,
++                                 real_blkdev, crypto_blkdev, label)) {
++      SLOGE("Password does not match key from slot:%d\n", slots);
++      //return -1;
++      slots--;
++      continue;
++    }
++
++    /* If init detects an encrypted filesystme, it writes a file for each such
++	   * encrypted fs into the tmpfs /data filesystem, and then the framework finds those
++	   * files and passes that data to me */
++	  /* Create a tmp mount point to try mounting the decryptd fs
++	   * Since we're here, the mount_point should be a tmpfs filesystem, so make
++	   * a directory in it to test mount the decrypted filesystem.
++	   */
++	  sprintf(tmp_mount_point, "%s/tmp_mnt", mount_point);
++	  mkdir(tmp_mount_point, 0755);
++	  if ( mount(crypto_blkdev, tmp_mount_point, "ext4", MS_RDONLY, "") ) {
++		SLOGE("Error temp mounting decrypted block device\n");
++		delete_crypto_blk_dev(label);
++		crypt_ftr.failed_decrypt_count++;
++	  } else {
++		/* Success, so just umount and we'll mount it properly when we restart
++		 * the framework.
++		 */
++		umount(tmp_mount_point);
++		crypt_ftr.failed_decrypt_count  = 0;
++
++		SLOGE("Password matched slot:%d\n", slots);
++		break;
++	  }
++
++    slots--;
+   }
+ 
+-  if (create_crypto_blk_dev(&crypt_ftr, decrypted_master_key,
+-                               real_blkdev, crypto_blkdev, label)) {
+-    SLOGE("Error creating decrypted block device\n");
++  if(slots < 0)
++  {
++    SLOGE("ERROR NO SLOTS MATCHED TO PASSWORD\n");
+     return -1;
+   }
+ 
+-  /* If init detects an encrypted filesystme, it writes a file for each such
+-   * encrypted fs into the tmpfs /data filesystem, and then the framework finds those
+-   * files and passes that data to me */
+-  /* Create a tmp mount point to try mounting the decryptd fs
+-   * Since we're here, the mount_point should be a tmpfs filesystem, so make
+-   * a directory in it to test mount the decrypted filesystem.
+-   */
+-  sprintf(tmp_mount_point, "%s/tmp_mnt", mount_point);
+-  mkdir(tmp_mount_point, 0755);
+-  if ( mount(crypto_blkdev, tmp_mount_point, "ext4", MS_RDONLY, "") ) {
+-    SLOGE("Error temp mounting decrypted block device\n");
+-    delete_crypto_blk_dev(label);
+-    crypt_ftr.failed_decrypt_count++;
+-  } else {
+-    /* Success, so just umount and we'll mount it properly when we restart
+-     * the framework.
+-     */
+-    umount(tmp_mount_point);
+-    crypt_ftr.failed_decrypt_count  = 0;
+-  }
++
+ 
+   if (orig_failed_decrypt_count != crypt_ftr.failed_decrypt_count) {
+-    put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, 0, 0);
++    put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, 0, 0, 0);
+   }
+ 
+   if (crypt_ftr.failed_decrypt_count) {
+@@ -877,7 +1259,7 @@ int cryptfs_setup_volume(const char *label, int major, int minor,
+     sprintf(real_blkdev, "/dev/block/vold/%d:%d", major, minor);
+ 
+     /* Just want the footer, but gotta get it all */
+-    get_crypt_ftr_and_key(saved_data_blkdev, &sd_crypt_ftr, key, salt);
++    get_crypt_ftr_and_key(saved_data_blkdev, &sd_crypt_ftr, key, salt, 0);
+ 
+     /* Update the fs_size field to be the size of the volume */
+     fd = open(real_blkdev, O_RDONLY);
+@@ -889,7 +1271,7 @@ int cryptfs_setup_volume(const char *label, int major, int minor,
+     }
+ 
+     sd_crypt_ftr.fs_size = nr_sec;
+-    create_crypto_blk_dev(&sd_crypt_ftr, saved_master_key, real_blkdev, 
++    create_crypto_blk_dev(&sd_crypt_ftr, saved_master_key, real_blkdev,
+                           crypto_blkdev, label);
+ 
+     stat(crypto_blkdev, &statbuf);
+@@ -950,7 +1332,7 @@ int cryptfs_verify_passwd(char *passwd)
+         return -1;
+     }
+ 
+-    if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt)) {
++    if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt,0)) {
+         SLOGE("Error getting crypt footer and key\n");
+         return -1;
+     }
+@@ -986,7 +1368,8 @@ static void cryptfs_init_crypt_mnt_ftr(struct crypt_mnt_ftr *ftr)
+     ftr->ftr_size = sizeof(struct crypt_mnt_ftr);
+     ftr->flags = 0;
+     ftr->keysize = KEY_LEN_BYTES;
+-    ftr->spare1 = 0;
++    ftr->nr_of_key_slots = 1;
++    ftr->key_types = 0;
+     ftr->fs_size = 0;
+     ftr->failed_decrypt_count = 0;
+     ftr->crypto_type_name[0] = '\0';
+@@ -1046,12 +1429,12 @@ static int cryptfs_enable_inplace(char *crypto_blkdev, char *real_blkdev, off64_
+     off64_t one_pct, cur_pct, new_pct;
+     off64_t blocks_already_done, tot_numblocks;
+ 
+-    if ( (realfd = open(real_blkdev, O_RDONLY)) < 0) { 
++    if ( (realfd = open(real_blkdev, O_RDONLY)) < 0) {
+         SLOGE("Error opening real_blkdev %s for inplace encrypt\n", real_blkdev);
+         return -1;
+     }
+ 
+-    if ( (cryptofd = open(crypto_blkdev, O_WRONLY)) < 0) { 
++    if ( (cryptofd = open(crypto_blkdev, O_WRONLY)) < 0) {
+         SLOGE("Error opening crypto_blkdev %s for inplace encrypt\n", crypto_blkdev);
+         close(realfd);
+         return -1;
+@@ -1120,7 +1503,7 @@ errout:
+ 
+ static inline int should_encrypt(struct volume_info *volume)
+ {
+-    return (volume->flags & (VOL_ENCRYPTABLE | VOL_NONREMOVABLE)) == 
++    return (volume->flags & (VOL_ENCRYPTABLE | VOL_NONREMOVABLE)) ==
+             (VOL_ENCRYPTABLE | VOL_NONREMOVABLE);
+ }
+ 
+@@ -1295,7 +1678,7 @@ int cryptfs_enable(char *howarg, char *passwd)
+     }
+ 
+     /* Write the key to the end of the partition */
+-    put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, master_key, salt);
++    put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, master_key, salt, 0);
+ 
+     decrypt_master_key(passwd, salt, master_key, decrypted_master_key);
+     create_crypto_blk_dev(&crypt_ftr, decrypted_master_key, real_blkdev, crypto_blkdev,
+@@ -1367,7 +1750,7 @@ int cryptfs_enable(char *howarg, char *passwd)
+ 
+         /* Clear the encryption in progres flag in the footer */
+         crypt_ftr.flags &= ~CRYPT_ENCRYPTION_IN_PROGRESS;
+-        put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, 0, 0);
++        put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, 0, 0, 0);
+ 
+         sleep(2); /* Give the UI a chance to show 100% progress */
+         android_reboot(ANDROID_RB_RESTART, 0, 0);
+@@ -1412,11 +1795,20 @@ error_shutting_down:
+ 
+ int cryptfs_changepw(char *newpw)
+ {
++	SLOGE("force cryptfs_changepw with keyslot: 0");
++    return cryptfs_changepw_for_slot(newpw, "0");
++}
++
++int cryptfs_changepw_for_slot(char *newpw, char *_keyslot)
++{
+     struct crypt_mnt_ftr crypt_ftr;
+     unsigned char encrypted_master_key[KEY_LEN_BYTES], decrypted_master_key[KEY_LEN_BYTES];
+     unsigned char salt[SALT_LEN];
+     char real_blkdev[MAXPATHLEN];
+ 
++    int keyslot = atoi(_keyslot);
++    SLOGE("cryptfs_changepw_for_slot: %d",keyslot);
++
+     /* This is only allowed after we've successfully decrypted the master key */
+     if (! master_key_saved) {
+         SLOGE("Key not saved, aborting");
+@@ -1430,15 +1822,260 @@ int cryptfs_changepw(char *newpw)
+     }
+ 
+     /* get key */
+-    if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt)) {
++    if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, keyslot)) {
+       SLOGE("Error getting crypt footer and key");
+       return -1;
+     }
+ 
++    /** Encrypt the master key*/
+     encrypt_master_key(newpw, salt, saved_master_key, encrypted_master_key);
+ 
+     /* save the key */
+-    put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt);
++    put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, keyslot);
++
++    return 0;
++}
++
++
++int cryptfs_add_key_slot(char *newpw, char *type)
++{
++    struct crypt_mnt_ftr crypt_ftr;
++    unsigned char encrypted_master_key[KEY_LEN_BYTES];
++    unsigned char salt[SALT_LEN];
++    char real_blkdev[MAXPATHLEN];
++
++    /* This is only allowed after we've successfully decrypted the master key */
++    if (! master_key_saved) {
++        SLOGE("Key not saved, aborting");
++        return -1;
++    }
++
++    property_get("ro.crypto.fs_real_blkdev", real_blkdev, "");
++    if (strlen(real_blkdev) == 0) {
++        SLOGE("Can't find real blkdev");
++        return -1;
++    }
++
++    /* get current settings and key */
++    if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, 0)) {
++      SLOGE("Error getting crypt footer and key");
++      return -1;
++    }
++
++    if(crypt_ftr.nr_of_key_slots == 0)
++    {
++    	crypt_ftr.nr_of_key_slots = 1;
++    	SLOGE("force nrOfKeyslots to 1");
++    }
++
++    /** increment slot counter */
++    crypt_ftr.nr_of_key_slots++;
++
++    // Set key slot type
++    //crypt_ftr.key_types = atoi(type);
++
++    /** encrypt masterkey with new password */
++    encrypt_master_key(newpw, salt, saved_master_key, encrypted_master_key);
++
++    /* save the key in new keyslot*/
++	if (put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, crypt_ftr.nr_of_key_slots-1) != 0) {
++		  SLOGE("Error adding key slot");
++		  return -1;
++	}
++
++	/* save crypt desc*/
++	if (put_crypt_desc(real_blkdev, &crypt_ftr, encrypted_master_key, salt, crypt_ftr.nr_of_key_slots-1, type, KEY_TO_SALT_PADDING) != 0) {
++		  SLOGE("Error adding key slot desc");
++		  return -1;
++	}
++    return 0;
++}
++
++int cryptfs_get_key_types(void)
++{
++  struct crypt_mnt_ftr crypt_ftr;
++    unsigned char encrypted_master_key[KEY_LEN_BYTES];
++    unsigned char salt[SALT_LEN];
++    char real_blkdev[MAXPATHLEN];
++
++    property_get("ro.crypto.fs_real_blkdev", real_blkdev, "");
++    if (strlen(real_blkdev) == 0) {
++        SLOGE("Can't find real blkdev");
++        return -1;
++    }
++
++    /* get current settings and key */
++    if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, 0)) {
++      SLOGE("Error getting crypt footer and key");
++      return -1;
++    }
++
++    return crypt_ftr.key_types;
++}
++
++int cryptfs_get_desc(int keyslot, char *desc)
++{
++    struct crypt_mnt_ftr crypt_ftr;
++    /* Allocate enough space for a 256 bit key, but we may use less */
++    unsigned char encrypted_master_key[32], decrypted_master_key[32];
++    unsigned char salt[SALT_LEN];
++    char real_blkdev[MAXPATHLEN];
++    char fs_type[PROPERTY_VALUE_MAX];
++    char fs_options[PROPERTY_VALUE_MAX];
++    unsigned long mnt_flags;
++    char encrypted_state[PROPERTY_VALUE_MAX];
++    int rc = 0;
++
++    property_get("ro.crypto.state", encrypted_state, "");
++    if (strcmp(encrypted_state, "encrypted") ) {
++        SLOGE("cryptfs_get_desc device not encrypted, aborting");
++        return -2;
++    }
++
++    /**
++    if (get_orig_mount_parms(saved_mount_point, fs_type, real_blkdev, &mnt_flags, fs_options)) {
++        SLOGE("Error reading original mount parms for mount point %s\n", saved_mount_point);
++        return -1;
++    }*/
++
++    property_get("ro.crypto.fs_real_blkdev", real_blkdev, "");
++    if (strlen(real_blkdev) == 0) {
++        SLOGE("cryptfs_get_desc Can't find real blkdev");
++        return -1;
++    }
++
++    if (get_crypt_desc(real_blkdev, &crypt_ftr, encrypted_master_key, salt,keyslot, desc)) {
++        SLOGE("cryptfs_get_desc Error getting crypt footer description and key\n");
++        return -1;
++    }
++
++    SLOGE("Read description from keyslot: %d with: %s\n",keyslot,desc);
++
++    return rc;
++}
++
++
++int cryptfs_remove_key_slot(char *_keyslot)
++{
++    struct crypt_mnt_ftr crypt_ftr;
++    unsigned char encrypted_master_key[KEY_LEN_BYTES];
++    unsigned char salt[SALT_LEN];
++    char real_blkdev[MAXPATHLEN];
++
++    int keyslot = atoi(_keyslot);
++
++    /* This is only allowed after we've successfully decrypted the master key */
++    if (! master_key_saved) {
++        SLOGE("Key not saved, aborting");
++        return -1;
++    }
++
++    property_get("ro.crypto.fs_real_blkdev", real_blkdev, "");
++    if (strlen(real_blkdev) == 0) {
++        SLOGE("Can't find real blkdev");
++        return -1;
++    }
++
++    /* get current settings and key */
++    if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, keyslot)) {
++      SLOGE("Error getting crypt footer and key");
++      return -1;
++    }
++
++    if(keyslot > crypt_ftr.nr_of_key_slots-1)
++    {
++    	SLOGE("keyslot not available, cant delete it");
++    	return -1;
++    }
++
++    /** decrement slot counter */
++    crypt_ftr.nr_of_key_slots--;
++
++    /* save current setting - old key stays in the system, just counter get set down*/
++    if (put_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, keyslot) != 0) {
++          SLOGE("Error removing key slot");
++          return -1;
++    }
+ 
+     return 0;
+ }
++
++
++int cryptfs_key_slots(void)
++{
++    struct crypt_mnt_ftr crypt_ftr;
++    unsigned char encrypted_master_key[KEY_LEN_BYTES];
++    unsigned char salt[SALT_LEN];
++    char real_blkdev[MAXPATHLEN];
++
++    /* This is only allowed after we've successfully decrypted the master key
++    if (! master_key_saved) {
++        SLOGE("cryptfs_key_slots -> Key not saved, aborting");
++        return -1;
++    }*/
++
++    property_get("ro.crypto.fs_real_blkdev", real_blkdev, "");
++    if (strlen(real_blkdev) == 0) {
++        SLOGE("Can't find real blkdev");
++        return -1;
++    }
++
++    /* get current settings and key */
++    if (get_crypt_ftr(real_blkdev, &crypt_ftr)) {
++      SLOGE("Error getting crypt footer and key in cryptfs_key_slots");
++      return -1;
++    }
++
++    /** Force keyslots to 1 if its zero*/
++    if(crypt_ftr.nr_of_key_slots == 0)
++    {
++    	crypt_ftr.nr_of_key_slots = 1;
++    	SLOGE("force nrOfKeyslots to 1");
++    }
++
++    /** return number of keyslots short int to int*/
++    int rv = crypt_ftr.nr_of_key_slots;
++    return rv;
++}
++
++
++
++/** For testing keys only.  slot 0-...*/
++int testKey(char *passwd, int slot)
++{
++  struct crypt_mnt_ftr crypt_ftr;
++  /* Allocate enough space for a 256 bit key, but we may use less */
++  unsigned char encrypted_master_key[32], decrypted_master_key[32];
++  unsigned char salt[SALT_LEN];
++  char crypto_blkdev[MAXPATHLEN];
++  char real_blkdev[MAXPATHLEN];
++  char fs_type[PROPERTY_VALUE_MAX];
++  char fs_options[PROPERTY_VALUE_MAX];
++  char tmp_mount_point[64];
++  unsigned long mnt_flags;
++  unsigned int orig_failed_decrypt_count;
++  char encrypted_state[PROPERTY_VALUE_MAX];
++  int rc;
++
++  SLOGE("test password:%s on slot:%d\n", passwd, slot);
++
++  if (get_crypt_ftr_and_key(real_blkdev, &crypt_ftr, encrypted_master_key, salt, slot)) {
++	SLOGE("Error getting crypt footer and key for slot:%d\n", slot);
++	return -1;
++  }
++
++  decrypt_master_key(passwd, salt, encrypted_master_key, decrypted_master_key);
++
++  char master_key_ascii[129];
++  convert_key_to_hex_ascii(decrypted_master_key, crypt_ftr.keysize, master_key_ascii);
++  SLOGE("decrypt_master_key: %s\n", master_key_ascii);
++
++  /** hold key*/
++  memcpy(saved_master_key, decrypted_master_key, KEY_LEN_BYTES);
++  saved_data_blkdev = strdup(real_blkdev);
++  master_key_saved = 1;
++
++  return 0;
++}
++
++
+diff --git a/cryptfs.h b/cryptfs.h
+index 1c1bc1a..30adf71 100644
+--- a/cryptfs.h
++++ b/cryptfs.h
+@@ -31,16 +31,17 @@
+ 
+ #define SALT_LEN 16
+ #define KEY_TO_SALT_PADDING 32
++#define KEY_SLOT_PADDING 32
+ 
+ /* definitions of flags in the structure below */
+-#define CRYPT_MNT_KEY_UNENCRYPTED 0x1 /* The key for the partition is not encrypted. */
++#define CRYPT_MNT_KEY_UNENCRYPTED 0x1
+ #define CRYPT_ENCRYPTION_IN_PROGRESS 0x2 /* Set when starting encryption,
+                                           * clear when done before rebooting */
+ 
+ #define CRYPT_MNT_MAGIC 0xD0B5B1C4
+ 
+ #define __le32 unsigned int
+-#define __le16 unsigned short int 
++#define __le16 unsigned short int
+ 
+ struct crypt_mnt_ftr {
+   __le32 magic;		/* See above */
+@@ -49,7 +50,8 @@ struct crypt_mnt_ftr {
+   __le32 ftr_size; 	/* in bytes, not including key following */
+   __le32 flags;		/* See above */
+   __le32 keysize;	/* in bytes */
+-  __le32 spare1;	/* ignored */
++  __le16 nr_of_key_slots;	/* contains the number of key slots that are used */
++  __le16 key_types;	/* ignored */
+   __le64 fs_size;	/* Size of the encrypted fs, in 512 byte sectors */
+   __le32 failed_decrypt_count; /* count of # of failed attempts to decrypt and
+ 				  mount, set to 0 on successful mount */
+@@ -79,6 +81,13 @@ extern "C" {
+   int cryptfs_restart(void);
+   int cryptfs_enable(char *flag, char *passwd);
+   int cryptfs_changepw(char *newpw);
++  int cryptfs_changepw_for_slot(char *newpw, char *_keyslot); //change password for keyslot, does not change crypt description
++  int cryptfs_add_key_slot(char *newpw,char *type);//adds keyslot with password and description
++  int cryptfs_get_key_types(void);//Retruns keytypes - NOT IN USE FOR NOW
++  int cryptfs_remove_key_slot(char *_keyslot);//removes a key slot
++  int cryptfs_key_slots(void);//Returns the number of keyslots
++  int cryptfs_get_desc(int keyslot, char *desc);//get crypto description to a keyslot
++  int testKey(char *passwd, int slot);//NOT IN USE
+   int cryptfs_setup_volume(const char *label, int major, int minor,
+                            char *crypto_dev_path, unsigned int max_pathlen,
+                            int *new_major, int *new_minor);

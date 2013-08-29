@@ -1,0 +1,2139 @@
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 2aa3c84..a30689d 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -107,7 +107,6 @@
+                 android:resource="@id/wireless_settings" />
+         </activity>
+ 
+-
+         <!-- Top-level settings -->
+ 
+         <activity android:name="Settings$WifiSettingsActivity"
+@@ -1339,7 +1338,7 @@
+ 
+         <activity android:name=".CryptKeeper"
+                   android:immersive="true"
+-                  android:launchMode="singleTop"
++                  android:launchMode="singleTask"
+                   android:excludeFromRecents="true"
+                   android:theme="@android:style/Theme.Holo.NoActionBar"
+                   android:configChanges="mcc|mnc|keyboard|keyboardHidden|uiMode"
+@@ -1357,6 +1356,16 @@
+             android:theme="@style/CryptKeeperBlankTheme"
+         />
+ 
++	<activity android:name=".CryptKeeperChangePassword"
++                  android:launchMode="singleTask"
++                  android:theme="@android:style/Theme.Holo.NoActionBar"
++                  android:configChanges="mcc|mnc|keyboard|keyboardHidden|uiMode">
++            <intent-filter>
++                <action android:name="android.intent.action.VIEW" />
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
++	</activity>
++
+         <activity android:name=".CryptKeeperConfirm$Blank"
+             android:immersive="true"
+             android:launchMode="singleTop"
+diff --git a/res/drawable-hdpi/encroid_progress.png b/res/drawable-hdpi/encroid_progress.png
+index f4fb961..d8ff9ea 100644
+Binary files a/res/drawable-hdpi/encroid_progress.png and b/res/drawable-hdpi/encroid_progress.png differ
+diff --git a/res/drawable-mdpi/encroid_progress.png b/res/drawable-mdpi/encroid_progress.png
+index e832c2a..aa712b0 100644
+Binary files a/res/drawable-mdpi/encroid_progress.png and b/res/drawable-mdpi/encroid_progress.png differ
+diff --git a/res/drawable-xhdpi/encroid_progress.png b/res/drawable-xhdpi/encroid_progress.png
+index ed9d10f..4609140 100644
+Binary files a/res/drawable-xhdpi/encroid_progress.png and b/res/drawable-xhdpi/encroid_progress.png differ
+diff --git a/res/layout/crypt_keeper_password_entry.xml b/res/layout/crypt_keeper_password_entry.xml
+index 1807f6d..f20ef8d 100644
+--- a/res/layout/crypt_keeper_password_entry.xml
++++ b/res/layout/crypt_keeper_password_entry.xml
+@@ -37,13 +37,36 @@
+ 
+     <!-- Emergency call button.
+          Text and icon are set by CryptKeeper.updateEmergencyCallButtonState() -->
+-    <Button android:id="@+id/emergencyCallButton"
+-        android:layout_width="wrap_content"
++     <LinearLayout
+         android:layout_height="wrap_content"
+-        android:layout_gravity="center"
+-        android:layout_marginTop="16dip"
+-        style="@*android:style/Widget.Button.Transparent"
+-        android:textSize="14sp"
+-        android:drawablePadding="6dip" />
++        android:layout_width="match_parent"
++        android:layout_marginLeft="8dip"
++        android:layout_marginRight="8dip"
++        android:orientation="horizontal">
++
++         <Button android:id="@+id/patternButton"
++	        android:layout_width="wrap_content"
++	        android:layout_height="wrap_content"
++	        android:layout_gravity="center"
++	        android:layout_marginTop="16dip"
++	        style="@*android:style/Widget.Button.Transparent"
++	        android:textSize="14sp"
++	        android:text="@string/keyslot_manager_pattern"
++	        android:drawablePadding="6dip" />
++
++
++		<Button android:id="@+id/emergencyCallButton"
++		        android:layout_width="wrap_content"
++		        android:layout_height="wrap_content"
++		        android:layout_gravity="center"
++		        android:layout_marginTop="16dip"
++		        style="@*android:style/Widget.Button.Transparent"
++		        android:textSize="14sp"
++		        android:drawablePadding="6dip" />
++
++    </LinearLayout>
++
++
++
+ 
+ </LinearLayout>
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index 0238222..04f2a6d 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -545,7 +545,7 @@
+     <string name="bluetooth_dock_settings_a2dp">For music and media</string>
+     <!-- Bluetooth settings. Dock Setting Dialog - Remember setting and don't ask user again -->
+     <string name="bluetooth_dock_settings_remember">Remember settings</string>
+-    
++
+     <!-- NFC settings -->
+     <!-- Used in the 1st-level settings screen to turn on NFC -->
+     <string name="nfc_quick_toggle_title">NFC</string>
+@@ -563,7 +563,7 @@
+     <string name="android_beam_label">Android Beam</string>
+     <!-- Explanation of the Android Beam feature in the Android Beam settings panel. The use of "beam" here is as a verb and not considered trademarked. [CHAR LIMIT=NONE] -->
+     <string name="android_beam_explained">When this feature is turned on, you can beam app content to another NFC-capable device by holding the devices close together. For example, you can beam Browser pages, YouTube videos, People contacts, and more.\n\nJust bring the devices together (typically back to back) and then touch your screen. The app determines what gets beamed.</string>
+-    
++
+ <!-- DEVICE Settings -->
+     <!-- Settings main menu category heading. Device (Sound, display, battery, applications...). [CHAR LIMIT=40] -->
+     <string name="header_category_device">DEVICE</string>
+@@ -755,11 +755,11 @@
+ 
+     <!-- Advanced, Device specific (DeviceParts) settings #CM -->
+     <string name="advanced_settings_title">Advanced</string>
+-    
++
+ <!-- INTERFACE Settings #CM -->
+     <!-- Settings main menu category heading. Interface (Launcher, Themes, System). [CHAR LIMIT=40] -->
+     <string name="header_category_interface">INTERFACE</string>
+-    
++
+     <!-- Launcher settings #CM -->
+     <string name="launcher_settings_title">Launcher</string>
+ 
+@@ -769,7 +769,7 @@
+     <!-- System Interface settings #CM -->
+     <string name="system_settings_title">System</string>
+     <string name="system_interface_title">System interface</string>
+-    
++
+     <!-- Notification Drawer #CM -->
+     <string name="notification_drawer_title">Notification drawer</string>
+ 
+@@ -1315,7 +1315,7 @@
+     <string name="backup_section_title">Backup &amp; restore</string>
+     <!-- Personal data section title -->
+     <string name="personal_data_section_title">Personal data</string>
+-    
++
+     <!-- Master Clear (Factory Data Reset) -->
+     <!-- SD card & phone storage settings screen, setting option name under Internal phone storage heading -->
+     <string name="master_clear_title">Factory data reset</string>
+@@ -1421,7 +1421,7 @@
+     <string name="dock_sounds_enable_summary_off" product="tablet">Don\'t play sound when inserting or removing tablet from dock</string>
+     <!-- Sound settings screen, setting option summary text when check box is clear -->
+     <string name="dock_sounds_enable_summary_off" product="default">Don\'t play sound when inserting or removing phone from dock</string>
+-    
++
+ <!-- Date and time settings --><skip />
+     <!-- Main Settings screen setting option name to go into the date and time settings-->
+     <string name="date_and_time_settings_title">Date &amp; time</string>
+@@ -1461,7 +1461,7 @@
+     <string name="date_picker_title">Date</string>
+     <!-- Title string shown above TimePicker, letting a user select system time [CHAR LIMIT=20] -->
+     <string name="time_picker_title">Time</string>
+-    
++
+     <!-- Performance settings #CM -->
+     <string name="performance_settings_title">Performance</string>
+ 
+@@ -1631,7 +1631,7 @@
+     <string name="build_date_default">2012-01-01-0000</string>
+     <!-- About device screen, show when a value of some status item is unavailable. -->
+     <string name="device_info_not_available">Not available</string>
+-    
++
+     <!-- Phone info -->
+     <!-- Phone Info screen. Button label to turn on the radio. Only shown in diagnostic screen, so precise translation is not needed. -->
+     <string name="turn_on_radio">Turn on radio</string>
+@@ -2089,9 +2089,9 @@
+     <!-- Temporary - stubed preference - to be removed once all preferences have been merged -->
+     <string name="stubbed">Preference Stub</string>
+     <string name="stubbed_summary">Temporary placeholder until functionality merged</string>
+-    
++
+     <!-- **** TEMPORARY LOCATION FOR CMPARTS MERGE - END **** -->
+-    
++
+     <!-- Instructions after the user changes the mass storage settings -->
+     <string name="sdcard_changes_instructions">Changes take effect when USB cable is reconnected</string>
+     <!-- Enable USB mass storage mode checkbox title -->
+@@ -4235,4 +4235,41 @@ found in the list of installed apps.</string>
+     <string name="pref_volume_wake_title">Volume rocker wake</string>
+     <string name="pref_volume_wake_summary">Pressing the volume rocker up/down will wake the device</string>
+ 
++    <!-- Added -->
++    <string name="pref_nfc_beam_test">Beam me up scotty</string>
++    <string name="pref_nfc_encrypt_btn">NFC unlock</string>
++
++    <!-- Settings Menu Entries -->
++    <string name="crypt_keeper_encrypt_changepw_title">Keyslot Manager</string>
++    <string name="crypt_keeper_encrypt_changepw_summary">Special encryption settings</string>
++
++    <!-- change encryption key -->
++    <string name="pref_encrypt_pw_change_title">Keyslot Manager</string>
++    <string name="pref_encrypt_pw_change_sum">If you like to change your encryption key, attach a NFC tag to your device.\nPlease be aware that is is not the PIN for the screenlock.</string>
++    <string name="pref_encrypt_pw_change_sum_second">Please re-attach your NFC tag to confirm!</string>
++    <string name="pref_encrypt_pw_change_ok">NFC tag accepted!\nKeep the provided key, in case the NFC logon doesn\'t work out.</string>
++    <string name="pref_encrypt_pw_change_fail">NFC tag failed!</string>
++    <string name="pref_encrypt_pw_change_not_equal">NFC tags are not equal, please try again!</string>
++    <string name="pref_encrypt_pw_change_pw">New NFC key:</string>
++    <string name="pref_encrypt_pw_change_nfc_fail">NFC doesn\'t work!</string>
++    <!-- Header on first screen of choose password/PIN flow [CHAR LIMIT=30] -->
++    <string name="pref_encrypt_pw_change_header">Choose NFC tag</string>
++
++    <!-- new keyslot mannager layout-->
++    <string name="keyslot_manager">Keyslot Manager</string>
++    <string name="enable_all_screenlock_possibilities">Enable all Screenlock possibilities</string>
++    <string name="keyslots_used">Keyslots used</string>
++    <string name="add_keyslot">Add Keyslot</string>
++    <string name="remove_keyslot">Remove Keyslot</string>
++    <string name="change_password_for_a_keyslot">Change Password for a Keyslot</string>
++    <string name="use_this_settings_carefully_">Use this settings carefully!</string>
++
++    <string name="keyslot_manager_nfc">Use NFC as key</string>
++    <string name="keyslot_manager_nfc_status_wait">Please touch your NFC tag and your device together.</string>
++    <string name="keyslot_manager_nfc_status_processing">Loading, do not remove tag!</string>
++    <string name="keyslot_manager_nfc_btn_cancle">abort NFC</string>
++    <string name="keyslot_manager_dialog_nfc">NFC Key</string>
++    <string name="keyslot_manager_dialog_password">Password</string>
++    <string name="keyslot_manager_dialog_title">Choose Keyslot</string>
++    <string name="keyslot_manager_pattern">Pattern</string>
+ </resources>
+diff --git a/res/xml/security_settings_encrypted.xml b/res/xml/security_settings_encrypted.xml
+index 02f1339..c540761 100644
+--- a/res/xml/security_settings_encrypted.xml
++++ b/res/xml/security_settings_encrypted.xml
+@@ -24,6 +24,10 @@
+             style="?android:preferenceInformationStyle"
+             android:title="@string/crypt_keeper_encrypt_title"
+             android:summary="@string/crypt_keeper_encrypted_summary" />
++        <Preference
++            android:title="@string/crypt_keeper_encrypt_changepw_title"
++            android:summary="@string/crypt_keeper_encrypt_changepw_summary"
++            android:key="keyslot_manager" />
+ 
+     </PreferenceCategory>
+ 
+diff --git a/src/com/android/settings/ChooseLockGeneric.java b/src/com/android/settings/ChooseLockGeneric.java
+index df421a2..26cdb8a 100644
+--- a/src/com/android/settings/ChooseLockGeneric.java
++++ b/src/com/android/settings/ChooseLockGeneric.java
+@@ -16,6 +16,7 @@
+ 
+ package com.android.settings;
+ 
++import android.os.SystemProperties;
+ import android.app.Activity;
+ import android.app.PendingIntent;
+ import android.app.admin.DevicePolicyManager;
+@@ -164,6 +165,7 @@ public class ChooseLockGeneric extends PreferenceActivity {
+         private void updatePreferencesOrFinish() {
+             Intent intent = getActivity().getIntent();
+             int quality = intent.getIntExtra(LockPatternUtils.PASSWORD_TYPE_KEY, -1);
++       
+             if (quality == -1) {
+                 // If caller didn't specify password quality, show UI and allow the user to choose.
+                 quality = intent.getIntExtra(MINIMUM_QUALITY_KEY, -1);
+@@ -181,8 +183,19 @@ public class ChooseLockGeneric extends PreferenceActivity {
+ 
+         private int upgradeQuality(int quality) {
+             quality = upgradeQualityForDPM(quality);
+-            quality = upgradeQualityForEncryption(quality);
++            
++            //Check if we have enabled all possibilities
++            if(java.lang.System.getProperty("vold.force") != null && java.lang.Integer.parseInt(java.lang.System.getProperty("vold.force"))==1)
++            {
++                //quality = DevicePolicyManager.PASSWORD_QUALITY_UNSPECIFIED;
++            }
++            else
++            {
++                quality = upgradeQualityForEncryption(quality);
++            }
++            
+             quality = upgradeQualityForKeyStore(quality);
++
+             return quality;
+         }
+ 
+@@ -192,6 +205,13 @@ public class ChooseLockGeneric extends PreferenceActivity {
+             if (quality < minQuality) {
+                 quality = minQuality;
+             }
++            
++            //Check if we have enabled all possibilities
++            //if(java.lang.System.getProperty("vold.force") != null && java.lang.Integer.parseInt(java.lang.System.getProperty("vold.force"))==1)
++            //{
++            //    quality = DevicePolicyManager.PASSWORD_QUALITY_UNSPECIFIED;
++            //}
++            
+             return quality;
+         }
+ 
+@@ -211,6 +231,13 @@ public class ChooseLockGeneric extends PreferenceActivity {
+                     quality = CryptKeeperSettings.MIN_PASSWORD_QUALITY;
+                 }
+             }
++            
++            //Check if we have enabled all possibilities
++            if(java.lang.System.getProperty("vold.force") != null && java.lang.Integer.parseInt(java.lang.System.getProperty("vold.force"))==1)
++            {
++                quality = DevicePolicyManager.PASSWORD_QUALITY_UNSPECIFIED;
++            }
++            
+             return quality;
+         }
+ 
+@@ -220,6 +247,13 @@ public class ChooseLockGeneric extends PreferenceActivity {
+                     quality = CredentialStorage.MIN_PASSWORD_QUALITY;
+                 }
+             }
++            
++            //Check if we have enabled all possibilities
++            //if(java.lang.System.getProperty("vold.force") != null && java.lang.Integer.parseInt(java.lang.System.getProperty("vold.force"))==1)
++            //{
++            //    quality = DevicePolicyManager.PASSWORD_QUALITY_UNSPECIFIED;
++            //}
++            
+             return quality;
+         }
+ 
+@@ -228,7 +262,14 @@ public class ChooseLockGeneric extends PreferenceActivity {
+          *
+          * @param quality the requested quality.
+          */
+-        private void disableUnusablePreferences(final int quality) {
++        private void disableUnusablePreferences(int quality) {
++
++            //Check if we have enabled all possibilities
++            if(java.lang.System.getProperty("vold.force") != null && java.lang.Integer.parseInt(java.lang.System.getProperty("vold.force"))==1)
++            {
++                quality = DevicePolicyManager.PASSWORD_QUALITY_UNSPECIFIED;
++            }
++        
+             final PreferenceScreen entries = getPreferenceScreen();
+             final boolean onlyShowFallback = getActivity().getIntent()
+                     .getBooleanExtra(LockPatternUtils.LOCKSCREEN_BIOMETRIC_WEAK_FALLBACK, false);
+@@ -307,6 +348,12 @@ public class ChooseLockGeneric extends PreferenceActivity {
+             if (!mPasswordConfirmed) {
+                 throw new IllegalStateException("Tried to update password without confirming it");
+             }
++            
++            //Check if we have enabled all possibilities
++            //if(java.lang.System.getProperty("vold.force") != null && java.lang.Integer.parseInt(java.lang.System.getProperty("vold.force"))==1)
++            //{
++            //    quality = DevicePolicyManager.PASSWORD_QUALITY_UNSPECIFIED;
++            //}
+ 
+             final boolean isFallback = getActivity().getIntent()
+                 .getBooleanExtra(LockPatternUtils.LOCKSCREEN_BIOMETRIC_WEAK_FALLBACK, false);
+diff --git a/src/com/android/settings/ChooseLockPassword.java b/src/com/android/settings/ChooseLockPassword.java
+index 2940442..ad92f9a 100644
+--- a/src/com/android/settings/ChooseLockPassword.java
++++ b/src/com/android/settings/ChooseLockPassword.java
+@@ -45,6 +45,10 @@ import android.widget.Button;
+ import android.widget.TextView;
+ import android.widget.TextView.OnEditorActionListener;
+ 
++import com.android.settings.nfc.NFCCryptKeeper;
++import android.util.Log;
++import android.app.FragmentTransaction;
++
+ public class ChooseLockPassword extends PreferenceActivity {
+     public static final String PASSWORD_MIN_KEY = "lockscreen.password_min";
+     public static final String PASSWORD_MAX_KEY = "lockscreen.password_max";
+@@ -55,6 +59,8 @@ public class ChooseLockPassword extends PreferenceActivity {
+     public static final String PASSWORD_MIN_SYMBOLS_KEY = "lockscreen.password_min_symbols";
+     public static final String PASSWORD_MIN_NONLETTER_KEY = "lockscreen.password_min_nonletter";
+ 
++    private NFCCryptKeeper		mNfcCryptKeeper;
++
+     @Override
+     public Intent getIntent() {
+         Intent modIntent = new Intent(super.getIntent());
+@@ -72,8 +78,60 @@ public class ChooseLockPassword extends PreferenceActivity {
+         super.onCreate(savedInstanceState);
+         CharSequence msg = getText(R.string.lockpassword_choose_your_password_header);
+         showBreadCrumbs(msg, msg);
++
++        Log.e("NFC", "Enable NFCCryptKeeper");
++        mNfcCryptKeeper = new NFCCryptKeeper(this);
++    }
++
++    @Override
++    public void onPause() {
++        super.onPause();
++        if(mNfcCryptKeeper != null)
++       	{
++   			mNfcCryptKeeper.disable();
++       	}
++    }
++
++    @Override
++    public void onResume() {
++        super.onResume();
++        if(mNfcCryptKeeper != null)
++    	{
++			mNfcCryptKeeper.enable();
++    	}
++    }
++
++    @Override
++    public void onStop() {
++        super.onStop();
++        if(mNfcCryptKeeper != null)
++        	mNfcCryptKeeper.stop();
+     }
+ 
++    @Override
++    public void onNewIntent(Intent intent)
++	{
++    	Log.i("NFC", "CryptKeeper.onNewIntent ConfirmLockPassword called with action:" + intent.getAction());
++    	if(mNfcCryptKeeper != null && intent.getAction() != null && (intent.getAction().equals("android.nfc.action.TAG_DISCOVERED")||intent.getAction().equals("android.nfc.action.TECH_DISCOVERED")))
++    	{
++    		String key = null;
++    		String result = null;
++    		//result = mNfcCryptKeeper.handleResult(intent, key);
++    		Log.i("NFC", "NFCCryptKeeper Result: " + result);
++    		if (result != null)
++    		{
++    			mConfirmFragment.getPasswordEntry().setText(result);
++    		}
++    	}
++	}
++
++    private ChooseLockPasswordFragment	mConfirmFragment	= null;
++
++	public void setFragment(ChooseLockPasswordFragment _f)
++	{
++		mConfirmFragment = _f;
++	}
++
+     public static class ChooseLockPasswordFragment extends Fragment
+             implements OnClickListener, OnEditorActionListener,  TextWatcher {
+         private static final String KEY_FIRST_PIN = "first_pin";
+@@ -112,6 +170,12 @@ public class ChooseLockPassword extends PreferenceActivity {
+             }
+         };
+ 
++        public TextView getPasswordEntry()
++		{
++			return mPasswordEntry;
++		}
++
++
+         /**
+          * Keep track internally of where the user is in choosing a pattern.
+          */
+@@ -173,6 +237,7 @@ public class ChooseLockPassword extends PreferenceActivity {
+                     mPasswordMinNonLetter), mLockPatternUtils.getRequestedPasswordMinimumNonLetter());
+ 
+             mChooseLockSettingsHelper = new ChooseLockSettingsHelper(getActivity());
++            ((ChooseLockPassword) getActivity()).setFragment(this);
+         }
+ 
+         @Override
+diff --git a/src/com/android/settings/ChooseLockPattern.java b/src/com/android/settings/ChooseLockPattern.java
+index 180eee1..aef32cb 100644
+--- a/src/com/android/settings/ChooseLockPattern.java
++++ b/src/com/android/settings/ChooseLockPattern.java
+@@ -60,6 +60,8 @@ public class ChooseLockPattern extends PreferenceActivity {
+      */
+     static final int RESULT_FINISHED = RESULT_FIRST_USER;
+ 
++    public static boolean ONLYCONFIRM;
++
+     @Override
+     public Intent getIntent() {
+         Intent modIntent = new Intent(super.getIntent());
+@@ -147,13 +149,28 @@ public class ChooseLockPattern extends PreferenceActivity {
+ 
+                 public void onPatternDetected(List<LockPatternView.Cell> pattern) {
+                     if (mUiStage == Stage.NeedToConfirm || mUiStage == Stage.ConfirmWrong) {
+-                        if (mChosenPattern == null) throw new IllegalStateException(
+-                                "null chosen pattern in stage 'need to confirm");
+-                        if (mChosenPattern.equals(pattern)) {
+-                            updateStage(Stage.ChoiceConfirmed);
+-                        } else {
+-                            updateStage(Stage.ConfirmWrong);
+-                        }
++
++                    	if(ONLYCONFIRM)
++                    	{
++                    		mChosenPattern = new ArrayList<LockPatternView.Cell>(pattern);
++
++                    		String password = getPassword(mChosenPattern);
++                        	Intent i = new Intent();
++                            i.putExtra("pattern", password);
++                        	getActivity().setResult(101,i);
++                        	getActivity().finish();
++                    	}
++                    	else
++                    	{
++                    		if (mChosenPattern == null) throw new IllegalStateException(
++                                    "null chosen pattern in stage 'need to confirm");
++                            if (mChosenPattern.equals(pattern)) {
++                                updateStage(Stage.ChoiceConfirmed);
++                            } else {
++                                updateStage(Stage.ConfirmWrong);
++                            }
++                    	}
++
+                     } else if (mUiStage == Stage.Introduction || mUiStage == Stage.ChoiceTooShort){
+                         if (pattern.size() < LockPatternUtils.MIN_LOCK_PATTERN_SIZE) {
+                             updateStage(Stage.ChoiceTooShort);
+@@ -294,6 +311,8 @@ public class ChooseLockPattern extends PreferenceActivity {
+ 
+         private ChooseLockSettingsHelper mChooseLockSettingsHelper;
+ 
++
++
+         private static final String KEY_UI_STAGE = "uiStage";
+         private static final String KEY_PATTERN_CHOICE = "chosenPattern";
+ 
+@@ -333,16 +352,22 @@ public class ChooseLockPattern extends PreferenceActivity {
+             final boolean confirmCredentials = getActivity().getIntent()
+                     .getBooleanExtra("confirm_credentials", false);
+ 
++            ONLYCONFIRM = getActivity().getIntent().getBooleanExtra("only_convirm", false);
++
+             if (savedInstanceState == null) {
+                 if (confirmCredentials) {
+                     // first launch. As a security measure, we're in NeedToConfirm mode until we
+                     // know there isn't an existing password or the user confirms their password.
+                     updateStage(Stage.NeedToConfirm);
+-                    boolean launchedConfirmationActivity =
+-                        mChooseLockSettingsHelper.launchConfirmationActivity(
+-                                CONFIRM_EXISTING_REQUEST, null, null);
+-                    if (!launchedConfirmationActivity) {
+-                        updateStage(Stage.Introduction);
++
++                    if(!ONLYCONFIRM)
++                    {
++                    	boolean launchedConfirmationActivity =
++                                mChooseLockSettingsHelper.launchConfirmationActivity(
++                                        CONFIRM_EXISTING_REQUEST, null, null);
++                            if (!launchedConfirmationActivity) {
++                                updateStage(Stage.Introduction);
++                            }
+                     }
+                 } else {
+                     updateStage(Stage.Introduction);
+@@ -509,16 +534,40 @@ public class ChooseLockPattern extends PreferenceActivity {
+ 
+             final boolean isFallback = getActivity().getIntent()
+                 .getBooleanExtra(LockPatternUtils.LOCKSCREEN_BIOMETRIC_WEAK_FALLBACK, false);
+-            utils.saveLockPattern(mChosenPattern, isFallback);
+-            utils.setLockPatternEnabled(true);
+ 
+-            if (lockVirgin) {
+-                utils.setVisiblePatternEnabled(true);
+-                utils.setTactileFeedbackEnabled(false);
++            final boolean returnLock = getActivity().getIntent().getBooleanExtra("return_lock_pattern", false);
++            if(returnLock)
++            {
++            	String password = getPassword(mChosenPattern);
++            	Intent i = new Intent();
++                i.putExtra("pattern", password);
++            	getActivity().setResult(101,i);
++            }
++            else
++            {
++            	//Save lock pattern
++            	utils.saveLockPattern(mChosenPattern, isFallback);
++                utils.setLockPatternEnabled(true);
++
++                if (lockVirgin) {
++                    utils.setVisiblePatternEnabled(true);
++                    utils.setTactileFeedbackEnabled(false);
++                }
++
++                getActivity().setResult(RESULT_FINISHED);
+             }
+ 
+-            getActivity().setResult(RESULT_FINISHED);
+             getActivity().finish();
+         }
++
++        public String getPassword(List<LockPatternView.Cell> mChosenPattern)
++        {
++        	String passwd = "";
++        	for (int i = 0; i < mChosenPattern.size(); i++) {
++        		passwd += mChosenPattern.get(i).getRow();
++        		passwd += mChosenPattern.get(i).getColumn();
++			}
++        	return passwd;
++        }
+     }
+ }
+diff --git a/src/com/android/settings/ConfirmLockPassword.java b/src/com/android/settings/ConfirmLockPassword.java
+index 1229046..3ec64f3 100644
+--- a/src/com/android/settings/ConfirmLockPassword.java
++++ b/src/com/android/settings/ConfirmLockPassword.java
+@@ -40,8 +40,14 @@ import android.widget.Button;
+ import android.widget.TextView;
+ import android.widget.TextView.OnEditorActionListener;
+ 
++import com.android.settings.nfc.NFCCryptKeeper;
++import android.util.Log;
++import android.app.FragmentTransaction;
++
+ public class ConfirmLockPassword extends PreferenceActivity {
+ 
++	private NFCCryptKeeper		mNfcCryptKeeper;
++
+     @Override
+     public Intent getIntent() {
+         Intent modIntent = new Intent(super.getIntent());
+@@ -58,8 +64,60 @@ public class ConfirmLockPassword extends PreferenceActivity {
+         super.onCreate(savedInstanceState);
+         CharSequence msg = getText(R.string.lockpassword_confirm_your_password_header);
+         showBreadCrumbs(msg, msg);
++
++        Log.e("NFC", "Enable NFCCryptKeeper");
++        mNfcCryptKeeper = new NFCCryptKeeper(this);
++    }
++
++    @Override
++    public void onPause() {
++        super.onPause();
++        if(mNfcCryptKeeper != null)
++       	{
++   			mNfcCryptKeeper.disable();
++       	}
++    }
++
++    @Override
++    public void onResume() {
++        super.onResume();
++        if(mNfcCryptKeeper != null)
++    	{
++			mNfcCryptKeeper.enable();
++    	}
+     }
+ 
++    @Override
++    public void onStop() {
++        super.onStop();
++        if(mNfcCryptKeeper != null)
++        	mNfcCryptKeeper.stop();
++    }
++
++    @Override
++    public void onNewIntent(Intent intent)
++	{
++    	Log.i("NFC", "CryptKeeper.onNewIntent ConfirmLockPassword called with action:" + intent.getAction());
++    	if(mNfcCryptKeeper != null && intent.getAction() != null && (intent.getAction().equals("android.nfc.action.TAG_DISCOVERED")||intent.getAction().equals("android.nfc.action.TECH_DISCOVERED")))
++    	{
++    		String key = null;
++    		String result = null;
++//    		result = mNfcCryptKeeper.handleResult(intent, key);
++    		Log.i("NFC", "NFCCryptKeeper Result: " + result);
++    		if (result != null)
++    		{
++    			mConfirmFragment.getPasswordEntry().setText(result);
++    		}
++    	}
++	}
++
++    private ConfirmLockPasswordFragment	mConfirmFragment	= null;
++
++	public void setFragment(ConfirmLockPasswordFragment _f)
++	{
++		mConfirmFragment = _f;
++	}
++
+     public static class ConfirmLockPasswordFragment extends Fragment implements OnClickListener,
+             OnEditorActionListener, TextWatcher {
+         private static final long ERROR_MESSAGE_TIMEOUT = 3000;
+@@ -71,16 +129,20 @@ public class ConfirmLockPassword extends PreferenceActivity {
+         private PasswordEntryKeyboardView mKeyboardView;
+         private Button mContinueButton;
+ 
++        public TextView getPasswordEntry()
++		{
++			return mPasswordEntry;
++		}
+ 
+         // required constructor for fragments
+         public ConfirmLockPasswordFragment() {
+-
+         }
+ 
+         @Override
+         public void onCreate(Bundle savedInstanceState) {
+             super.onCreate(savedInstanceState);
+             mLockPatternUtils = new LockPatternUtils(getActivity());
++            ((ConfirmLockPassword) getActivity()).setFragment(this);
+         }
+ 
+         @Override
+diff --git a/src/com/android/settings/CryptKeeper.java b/src/com/android/settings/CryptKeeper.java
+index 655d8ad..7cbffea 100644
+--- a/src/com/android/settings/CryptKeeper.java
++++ b/src/com/android/settings/CryptKeeper.java
+@@ -16,6 +16,7 @@
+ 
+ package com.android.settings;
+ 
++import com.android.internal.widget.LockPatternUtils;
+ import android.app.Activity;
+ import android.app.StatusBarManager;
+ import android.content.ComponentName;
+@@ -47,16 +48,23 @@ import android.widget.EditText;
+ import android.widget.ProgressBar;
+ import android.widget.TextView;
+ 
++import android.os.IBinder;
++import android.os.RemoteException;
++
+ import com.android.internal.telephony.ITelephony;
+ 
++import com.android.settings.nfc.NFCCryptKeeper;
++
+ import java.util.List;
+ 
+ /**
+  * Settings screens to show the UI flows for encrypting/decrypting the device.
+  *
+- * This may be started via adb for debugging the UI layout, without having to go through
+- * encryption flows everytime. It should be noted that starting the activity in this manner
+- * is only useful for verifying UI-correctness - the behavior will not be identical.
++ * This may be started via adb for debugging the UI layout, without having to go
++ * through encryption flows everytime. It should be noted that starting the
++ * activity in this manner is only useful for verifying UI-correctness - the
++ * behavior will not be identical.
++ *
+  * <pre>
+  * $ adb shell pm enable com.android.settings/.CryptKeeper
+  * $ adb shell am start \
+@@ -65,530 +73,756 @@ import java.util.List;
+  * </pre>
+  */
+ public class CryptKeeper extends Activity implements TextView.OnEditorActionListener {
+-    private static final String TAG = "CryptKeeper";
+-
+-    private static final String DECRYPT_STATE = "trigger_restart_framework";
+-
+-    private static final int UPDATE_PROGRESS = 1;
+-    private static final int COOLDOWN = 2;
+-
+-    private static final int MAX_FAILED_ATTEMPTS = 30;
+-    private static final int COOL_DOWN_ATTEMPTS = 10;
+-    private static final int COOL_DOWN_INTERVAL = 30; // 30 seconds
+-
+-    // Intent action for launching the Emergency Dialer activity.
+-    static final String ACTION_EMERGENCY_DIAL = "com.android.phone.EmergencyDialer.DIAL";
+-
+-    // Debug Intent extras so that this Activity may be started via adb for debugging UI layouts
+-    private static final String EXTRA_FORCE_VIEW =
+-            "com.android.settings.CryptKeeper.DEBUG_FORCE_VIEW";
+-    private static final String FORCE_VIEW_PROGRESS = "progress";
+-    private static final String FORCE_VIEW_ENTRY = "entry";
+-    private static final String FORCE_VIEW_ERROR = "error";
+-
+-    /** When encryption is detected, this flag indivates whether or not we've checked for erros. */
+-    private boolean mValidationComplete;
+-    private boolean mValidationRequested;
+-    /** A flag to indicate that the volume is in a bad state (e.g. partially encrypted). */
+-    private boolean mEncryptionGoneBad;
+-
+-    private int mCooldown;
+-    PowerManager.WakeLock mWakeLock;
+-    private EditText mPasswordEntry;
+-
+-    /**
+-     * Used to propagate state through configuration changes (e.g. screen rotation)
+-     */
+-    private static class NonConfigurationInstanceState {
+-        final PowerManager.WakeLock wakelock;
+-
+-        NonConfigurationInstanceState(PowerManager.WakeLock _wakelock) {
+-            wakelock = _wakelock;
+-        }
+-    }
+-
+-    // This activity is used to fade the screen to black after the password is entered.
+-    public static class Blank extends Activity {
+-        @Override
+-        public void onCreate(Bundle savedInstanceState) {
+-            super.onCreate(savedInstanceState);
+-            setContentView(R.layout.crypt_keeper_blank);
+-        }
+-    }
+-
+-    private class DecryptTask extends AsyncTask<String, Void, Integer> {
+-        @Override
+-        protected Integer doInBackground(String... params) {
+-            IMountService service = getMountService();
+-            try {
+-                return service.decryptStorage(params[0]);
+-            } catch (Exception e) {
+-                Log.e(TAG, "Error while decrypting...", e);
+-                return -1;
+-            }
+-        }
+-
+-        @Override
+-        protected void onPostExecute(Integer failedAttempts) {
+-            if (failedAttempts == 0) {
+-                // The password was entered successfully. Start the Blank activity
+-                // so this activity animates to black before the devices starts. Note
+-                // It has 1 second to complete the animation or it will be frozen
+-                // until the boot animation comes back up.
+-                Intent intent = new Intent(CryptKeeper.this, Blank.class);
+-                finish();
+-                startActivity(intent);
+-            } else if (failedAttempts == MAX_FAILED_ATTEMPTS) {
+-                // Factory reset the device.
+-                sendBroadcast(new Intent("android.intent.action.MASTER_CLEAR"));
+-            } else if ((failedAttempts % COOL_DOWN_ATTEMPTS) == 0) {
+-                mCooldown = COOL_DOWN_INTERVAL;
+-                cooldown();
+-            } else {
+-                TextView tv = (TextView) findViewById(R.id.status);
+-                tv.setText(R.string.try_again);
+-                tv.setVisibility(View.VISIBLE);
+-
+-                // Reenable the password entry
+-                mPasswordEntry.setEnabled(true);
+-            }
+-        }
+-    }
+-
+-    private class ValidationTask extends AsyncTask<Void, Void, Boolean> {
+-        @Override
+-        protected Boolean doInBackground(Void... params) {
+-            IMountService service = getMountService();
+-            try {
+-                Log.d(TAG, "Validating encryption state.");
+-                int state = service.getEncryptionState();
+-                if (state == IMountService.ENCRYPTION_STATE_NONE) {
+-                    Log.w(TAG, "Unexpectedly in CryptKeeper even though there is no encryption.");
+-                    return true; // Unexpected, but fine, I guess...
+-                }
+-                return state == IMountService.ENCRYPTION_STATE_OK;
+-            } catch (RemoteException e) {
+-                Log.w(TAG, "Unable to get encryption state properly");
+-                return true;
+-            }
+-        }
+-
+-        @Override
+-        protected void onPostExecute(Boolean result) {
+-            mValidationComplete = true;
+-            if (Boolean.FALSE.equals(result)) {
+-                Log.w(TAG, "Incomplete, or corrupted encryption detected. Prompting user to wipe.");
+-                mEncryptionGoneBad = true;
+-            } else {
+-                Log.d(TAG, "Encryption state validated. Proceeding to configure UI");
+-            }
+-            setupUi();
+-        }
+-    }
+-
+-    private final Handler mHandler = new Handler() {
+-        @Override
+-        public void handleMessage(Message msg) {
+-            switch (msg.what) {
+-            case UPDATE_PROGRESS:
+-                updateProgress();
+-                break;
+-
+-            case COOLDOWN:
+-                cooldown();
+-                break;
+-            }
+-        }
+-    };
+-
+-    /** @return whether or not this Activity was started for debugging the UI only. */
+-    private boolean isDebugView() {
+-        return getIntent().hasExtra(EXTRA_FORCE_VIEW);
+-    }
+-
+-    /** @return whether or not this Activity was started for debugging the specific UI view only. */
+-    private boolean isDebugView(String viewType /* non-nullable */) {
+-        return viewType.equals(getIntent().getStringExtra(EXTRA_FORCE_VIEW));
+-    }
+-
+-    @Override
+-    public void onCreate(Bundle savedInstanceState) {
+-        super.onCreate(savedInstanceState);
+-
+-        // If we are not encrypted or encrypting, get out quickly.
+-        String state = SystemProperties.get("vold.decrypt");
+-        if (!isDebugView() && ("".equals(state) || DECRYPT_STATE.equals(state))) {
+-            // Disable the crypt keeper.
+-            PackageManager pm = getPackageManager();
+-            ComponentName name = new ComponentName(this, CryptKeeper.class);
+-            pm.setComponentEnabledSetting(name, PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+-                    PackageManager.DONT_KILL_APP);
+-            // Typically CryptKeeper is launched as the home app.  We didn't
+-            // want to be running, so need to finish this activity.  We can count
+-            // on the activity manager re-launching the new home app upon finishing
+-            // this one, since this will leave the activity stack empty.
+-            // NOTE: This is really grungy.  I think it would be better for the
+-            // activity manager to explicitly launch the crypt keeper instead of
+-            // home in the situation where we need to decrypt the device
+-            finish();
+-            return;
+-        }
+-
+-        // Disable the status bar
+-        StatusBarManager sbm = (StatusBarManager) getSystemService(Context.STATUS_BAR_SERVICE);
+-        sbm.disable(StatusBarManager.DISABLE_EXPAND
+-                | StatusBarManager.DISABLE_NOTIFICATION_ICONS
+-                | StatusBarManager.DISABLE_NOTIFICATION_ALERTS
+-                | StatusBarManager.DISABLE_SYSTEM_INFO
+-                | StatusBarManager.DISABLE_HOME
+-                | StatusBarManager.DISABLE_RECENT
+-                | StatusBarManager.DISABLE_BACK);
+-
+-        // Check for (and recover) retained instance data
+-        Object lastInstance = getLastNonConfigurationInstance();
+-        if (lastInstance instanceof NonConfigurationInstanceState) {
+-            NonConfigurationInstanceState retained = (NonConfigurationInstanceState) lastInstance;
+-            mWakeLock = retained.wakelock;
+-            Log.d(TAG, "Restoring wakelock from NonConfigurationInstanceState");
+-        }
+-    }
+-
+-    /**
+-     * Note, we defer the state check and screen setup to onStart() because this will be
+-     * re-run if the user clicks the power button (sleeping/waking the screen), and this is
+-     * especially important if we were to lose the wakelock for any reason.
+-     */
+-    @Override
+-    public void onStart() {
+-        super.onStart();
+-
+-        setupUi();
+-    }
+-
+-    /**
+-     * Initializes the UI based on the current state of encryption.
+-     * This is idempotent - calling repeatedly will simply re-initialize the UI.
+-     */
+-    private void setupUi() {
+-        if (mEncryptionGoneBad || isDebugView(FORCE_VIEW_ERROR)) {
+-            setContentView(R.layout.crypt_keeper_progress);
+-            showFactoryReset();
+-            return;
+-        }
+-
+-        String progress = SystemProperties.get("vold.encrypt_progress");
+-        if (!"".equals(progress) || isDebugView(FORCE_VIEW_PROGRESS)) {
+-            setContentView(R.layout.crypt_keeper_progress);
+-            encryptionProgressInit();
+-        } else if (mValidationComplete) {
+-            setContentView(R.layout.crypt_keeper_password_entry);
+-            passwordEntryInit();
+-        } else if (!mValidationRequested) {
+-            // We're supposed to be encrypted, but no validation has been done.
+-            new ValidationTask().execute((Void[]) null);
+-            mValidationRequested = true;
+-        }
+-    }
+-
+-    @Override
+-    public void onStop() {
+-        super.onStop();
+-
+-        mHandler.removeMessages(COOLDOWN);
+-        mHandler.removeMessages(UPDATE_PROGRESS);
+-    }
+-
+-    /**
+-     * Reconfiguring, so propagate the wakelock to the next instance.  This runs between onStop()
+-     * and onDestroy() and only if we are changing configuration (e.g. rotation).  Also clears
+-     * mWakeLock so the subsequent call to onDestroy does not release it.
+-     */
+-    @Override
+-    public Object onRetainNonConfigurationInstance() {
+-        NonConfigurationInstanceState state = new NonConfigurationInstanceState(mWakeLock);
+-        Log.d(TAG, "Handing wakelock off to NonConfigurationInstanceState");
+-        mWakeLock = null;
+-        return state;
+-    }
+-
+-    @Override
+-    public void onDestroy() {
+-        super.onDestroy();
+-
+-        if (mWakeLock != null) {
+-            Log.d(TAG, "Releasing and destroying wakelock");
+-            mWakeLock.release();
+-            mWakeLock = null;
+-        }
+-    }
+-
+-    private void encryptionProgressInit() {
+-        // Accquire a partial wakelock to prevent the device from sleeping. Note
+-        // we never release this wakelock as we will be restarted after the device
+-        // is encrypted.
+-
+-        Log.d(TAG, "Encryption progress screen initializing.");
+-        if (mWakeLock == null) {
+-            Log.d(TAG, "Acquiring wakelock.");
+-            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+-            mWakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, TAG);
+-            mWakeLock.acquire();
+-        }
+-
+-        ProgressBar progressBar = (ProgressBar) findViewById(R.id.progress_bar);
+-        progressBar.setIndeterminate(true);
+-
+-        updateProgress();
+-    }
+-
+-    private void showFactoryReset() {
+-        // Hide the encryption-bot to make room for the "factory reset" button
+-        findViewById(R.id.encroid).setVisibility(View.GONE);
+-
+-        // Show the reset button, failure text, and a divider
+-        Button button = (Button) findViewById(R.id.factory_reset);
+-        button.setVisibility(View.VISIBLE);
+-        button.setOnClickListener(new OnClickListener() {
+-            public void onClick(View v) {
+-                // Factory reset the device.
+-                sendBroadcast(new Intent("android.intent.action.MASTER_CLEAR"));
+-            }
+-        });
+-
+-        TextView tv = (TextView) findViewById(R.id.title);
+-        tv.setText(R.string.crypt_keeper_failed_title);
+-
+-        tv = (TextView) findViewById(R.id.status);
+-        tv.setText(R.string.crypt_keeper_failed_summary);
+-
+-        View view = findViewById(R.id.bottom_divider);
+-        if (view != null) {
+-            view.setVisibility(View.VISIBLE);
+-        }
+-    }
+-
+-    private void updateProgress() {
+-        String state = SystemProperties.get("vold.encrypt_progress");
+-
+-        if ("error_partially_encrypted".equals(state)) {
+-            showFactoryReset();
+-            return;
+-        }
+-
+-        int progress = 0;
+-        try {
+-            // Force a 50% progress state when debugging the view.
+-            progress = isDebugView() ? 50 : Integer.parseInt(state);
+-        } catch (Exception e) {
+-            Log.w(TAG, "Error parsing progress: " + e.toString());
+-        }
+-
+-        CharSequence status = getText(R.string.crypt_keeper_setup_description);
+-        Log.v(TAG, "Encryption progress: " + progress);
+-        TextView tv = (TextView) findViewById(R.id.status);
+-        tv.setText(TextUtils.expandTemplate(status, Integer.toString(progress)));
+-
+-        // Check the progress every 5 seconds
+-        mHandler.removeMessages(UPDATE_PROGRESS);
+-        mHandler.sendEmptyMessageDelayed(UPDATE_PROGRESS, 5000);
+-    }
+-
+-    private void cooldown() {
+-        TextView tv = (TextView) findViewById(R.id.status);
+-
+-        if (mCooldown <= 0) {
+-            // Re-enable the password entry
+-            mPasswordEntry.setEnabled(true);
+-
+-            tv.setVisibility(View.GONE);
+-        } else {
+-            CharSequence template = getText(R.string.crypt_keeper_cooldown);
+-            tv.setText(TextUtils.expandTemplate(template, Integer.toString(mCooldown)));
+-
+-            tv.setVisibility(View.VISIBLE);
+-
+-            mCooldown--;
+-            mHandler.removeMessages(COOLDOWN);
+-            mHandler.sendEmptyMessageDelayed(COOLDOWN, 1000); // Tick every second
+-        }
+-    }
+-
+-    private void passwordEntryInit() {
+-        mPasswordEntry = (EditText) findViewById(R.id.passwordEntry);
+-        mPasswordEntry.setOnEditorActionListener(this);
+-        mPasswordEntry.requestFocus();
+-
+-        View imeSwitcher = findViewById(R.id.switch_ime_button);
+-        final InputMethodManager imm = (InputMethodManager) getSystemService(
+-                Context.INPUT_METHOD_SERVICE);
+-        if (imeSwitcher != null && hasMultipleEnabledIMEsOrSubtypes(imm, false)) {
+-            imeSwitcher.setVisibility(View.VISIBLE);
+-            imeSwitcher.setOnClickListener(new OnClickListener() {
+-                public void onClick(View v) {
+-                    imm.showInputMethodPicker();
+-                }
+-            });
+-        }
+-
+-        // Asynchronously throw up the IME, since there are issues with requesting it to be shown
+-        // immediately.
+-        mHandler.postDelayed(new Runnable() {
+-            @Override public void run() {
+-                imm.showSoftInputUnchecked(0, null);
+-            }
+-        }, 0);
+-
+-        updateEmergencyCallButtonState();
+-    }
+-
+-    /**
+-     * Method adapted from com.android.inputmethod.latin.Utils
+-     *
+-     * @param imm The input method manager
+-     * @param shouldIncludeAuxiliarySubtypes
+-     * @return true if we have multiple IMEs to choose from
+-     */
+-    private boolean hasMultipleEnabledIMEsOrSubtypes(InputMethodManager imm,
+-            final boolean shouldIncludeAuxiliarySubtypes) {
+-        final List<InputMethodInfo> enabledImis = imm.getEnabledInputMethodList();
+-
+-        // Number of the filtered IMEs
+-        int filteredImisCount = 0;
+-
+-        for (InputMethodInfo imi : enabledImis) {
+-            // We can return true immediately after we find two or more filtered IMEs.
+-            if (filteredImisCount > 1) return true;
+-            final List<InputMethodSubtype> subtypes =
+-                    imm.getEnabledInputMethodSubtypeList(imi, true);
+-            // IMEs that have no subtypes should be counted.
+-            if (subtypes.isEmpty()) {
+-                ++filteredImisCount;
+-                continue;
+-            }
+-
+-            int auxCount = 0;
+-            for (InputMethodSubtype subtype : subtypes) {
+-                if (subtype.isAuxiliary()) {
+-                    ++auxCount;
+-                }
+-            }
+-            final int nonAuxCount = subtypes.size() - auxCount;
+-
+-            // IMEs that have one or more non-auxiliary subtypes should be counted.
+-            // If shouldIncludeAuxiliarySubtypes is true, IMEs that have two or more auxiliary
+-            // subtypes should be counted as well.
+-            if (nonAuxCount > 0 || (shouldIncludeAuxiliarySubtypes && auxCount > 1)) {
+-                ++filteredImisCount;
+-                continue;
+-            }
+-        }
+-
+-        return filteredImisCount > 1
+-        // imm.getEnabledInputMethodSubtypeList(null, false) will return the current IME's enabled
+-        // input method subtype (The current IME should be LatinIME.)
+-                || imm.getEnabledInputMethodSubtypeList(null, false).size() > 1;
+-    }
+-
+-    private IMountService getMountService() {
+-        IBinder service = ServiceManager.getService("mount");
+-        if (service != null) {
+-            return IMountService.Stub.asInterface(service);
+-        }
+-        return null;
+-    }
+-
+-    @Override
+-    public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+-        if (actionId == EditorInfo.IME_NULL || actionId == EditorInfo.IME_ACTION_DONE) {
+-            // Get the password
+-            String password = v.getText().toString();
+-
+-            if (TextUtils.isEmpty(password)) {
+-                return true;
+-            }
+-
+-            // Now that we have the password clear the password field.
+-            v.setText(null);
+-
+-            // Disable the password entry while checking the password. This
+-            // we either be reenabled if the password was wrong or after the
+-            // cooldown period.
+-            mPasswordEntry.setEnabled(false);
+-
+-            Log.d(TAG, "Attempting to send command to decrypt");
+-            new DecryptTask().execute(password);
+-
+-            return true;
+-        }
+-        return false;
+-    }
+-
+-    //
+-    // Code to update the state of, and handle clicks from, the "Emergency call" button.
+-    //
+-    // This code is mostly duplicated from the corresponding code in
+-    // LockPatternUtils and LockPatternKeyguardView under frameworks/base.
+-    //
+-
+-    private void updateEmergencyCallButtonState() {
+-        Button button = (Button) findViewById(R.id.emergencyCallButton);
+-        // The button isn't present at all in some configurations.
+-        if (button == null) return;
+-
+-        if (isEmergencyCallCapable()) {
+-            button.setVisibility(View.VISIBLE);
+-            button.setOnClickListener(new View.OnClickListener() {
+-                    public void onClick(View v) {
+-                        takeEmergencyCallAction();
+-                    }
+-                });
+-        } else {
+-            button.setVisibility(View.GONE);
+-            return;
+-        }
+-
+-        int newState = TelephonyManager.getDefault().getCallState();
+-        int textId;
+-        if (newState == TelephonyManager.CALL_STATE_OFFHOOK) {
+-            // show "return to call" text and show phone icon
+-            textId = R.string.cryptkeeper_return_to_call;
+-            int phoneCallIcon = R.drawable.stat_sys_phone_call;
+-            button.setCompoundDrawablesWithIntrinsicBounds(phoneCallIcon, 0, 0, 0);
+-        } else {
+-            textId = R.string.cryptkeeper_emergency_call;
+-            int emergencyIcon = R.drawable.ic_emergency;
+-            button.setCompoundDrawablesWithIntrinsicBounds(emergencyIcon, 0, 0, 0);
+-        }
+-        button.setText(textId);
+-    }
+-
+-    private boolean isEmergencyCallCapable() {
+-        return getResources().getBoolean(com.android.internal.R.bool.config_voice_capable);
+-    }
+-
+-    private void takeEmergencyCallAction() {
+-        if (TelephonyManager.getDefault().getCallState() == TelephonyManager.CALL_STATE_OFFHOOK) {
+-            resumeCall();
+-        } else {
+-            launchEmergencyDialer();
+-        }
+-    }
+-
+-    private void resumeCall() {
+-        ITelephony phone = ITelephony.Stub.asInterface(ServiceManager.checkService("phone"));
+-        if (phone != null) {
+-            try {
+-                phone.showCallScreen();
+-            } catch (RemoteException e) {
+-                Log.e(TAG, "Error calling ITelephony service: " + e);
+-            }
+-        }
+-    }
+-
+-    private void launchEmergencyDialer() {
+-        Intent intent = new Intent(ACTION_EMERGENCY_DIAL);
+-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+-                        | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+-        startActivity(intent);
+-    }
++	private static final String TAG = "CryptKeeper";
++
++	private static int LOCK_PATTERN = 101;
++
++	private static final String DECRYPT_STATE = "trigger_restart_framework";
++
++	private static final int UPDATE_PROGRESS = 1;
++	private static final int COOLDOWN = 2;
++
++	private static final int MAX_FAILED_ATTEMPTS = 30;
++	private static final int COOL_DOWN_ATTEMPTS = 10;
++	private static final int COOL_DOWN_INTERVAL = 30; // 30 seconds
++
++	// Intent action for launching the Emergency Dialer activity.
++	static final String ACTION_EMERGENCY_DIAL = "com.android.phone.EmergencyDialer.DIAL";
++
++	// Debug Intent extras so that this Activity may be started via adb for
++	// debugging UI layouts
++	private static final String EXTRA_FORCE_VIEW = "com.android.settings.CryptKeeper.DEBUG_FORCE_VIEW";
++	private static final String FORCE_VIEW_PROGRESS = "progress";
++	private static final String FORCE_VIEW_ENTRY = "entry";
++	private static final String FORCE_VIEW_ERROR = "error";
++
++	/**
++	 * When encryption is detected, this flag indivates whether or not we've
++	 * checked for erros.
++	 */
++	private boolean mValidationComplete;
++	private boolean mValidationRequested;
++	/**
++	 * A flag to indicate that the volume is in a bad state (e.g. partially
++	 * encrypted).
++	 */
++	private boolean mEncryptionGoneBad;
++
++	private int mCooldown;
++	PowerManager.WakeLock mWakeLock;
++	private EditText mPasswordEntry;
++	private NFCCryptKeeper mNfcCryptKeeper;
++	private IMountService mMountService;
++	private int mKeySlots;
++	private int mLastKeySlotType;
++	private String mNFCAccessKey;
++	private String mNFCAccessKeyLength;
++	private String mNFCAccessKeySlot;
++
++	/**
++	 * Used to propagate state through configuration changes (e.g. screen
++	 * rotation)
++	 */
++	private static class NonConfigurationInstanceState {
++		final PowerManager.WakeLock wakelock;
++
++		NonConfigurationInstanceState(PowerManager.WakeLock _wakelock) {
++			wakelock = _wakelock;
++		}
++	}
++
++	// This activity is used to fade the screen to black after the password is
++	// entered.
++	public static class Blank extends Activity {
++		@Override
++		public void onCreate(Bundle savedInstanceState) {
++			super.onCreate(savedInstanceState);
++			setContentView(R.layout.crypt_keeper_blank);
++		}
++	}
++
++	private class DecryptTask extends AsyncTask<String, Void, Integer> {
++		@Override
++		protected Integer doInBackground(String... params) {
++			IMountService service = getMountService();
++			try {
++				return service.decryptStorage(params[0]);
++			} catch (Exception e) {
++				Log.e(TAG, "Error while decrypting...", e);
++				return -1;
++			}
++		}
++
++		@Override
++		protected void onPostExecute(Integer failedAttempts) {
++			if (failedAttempts == 0) {
++				// The password was entered successfully. Start the Blank
++				// activity
++				// so this activity animates to black before the devices starts.
++				// Note
++				// It has 1 second to complete the animation or it will be
++				// frozen
++				// until the boot animation comes back up.
++				Intent intent = new Intent(CryptKeeper.this, Blank.class);
++				finish();
++				startActivity(intent);
++			} else if (failedAttempts == MAX_FAILED_ATTEMPTS) {
++				// Factory reset the device.
++				sendBroadcast(new Intent("android.intent.action.MASTER_CLEAR"));
++			} else if ((failedAttempts % COOL_DOWN_ATTEMPTS) == 0) {
++				mCooldown = COOL_DOWN_INTERVAL;
++				cooldown();
++			} else {
++				TextView tv = (TextView) findViewById(R.id.status);
++				tv.setText(R.string.try_again);
++				tv.setVisibility(View.VISIBLE);
++				int x = 0;
++				// Reenable the password entry
++				mPasswordEntry.setEnabled(true);
++			}
++		}
++	}
++
++	private class ValidationTask extends AsyncTask<Void, Void, Boolean> {
++		@Override
++		protected Boolean doInBackground(Void... params) {
++			IMountService service = getMountService();
++			try {
++				Log.d(TAG, "Validating encryption state.");
++				int state = service.getEncryptionState();
++				if (state == IMountService.ENCRYPTION_STATE_NONE) {
++					Log.w(TAG, "Unexpectedly in CryptKeeper even though there is no encryption.");
++					return true; // Unexpected, but fine, I guess...
++				}
++				return state == IMountService.ENCRYPTION_STATE_OK;
++			} catch (RemoteException e) {
++				Log.w(TAG, "Unable to get encryption state properly");
++				return true;
++			}
++		}
++
++		@Override
++		protected void onPostExecute(Boolean result) {
++			mValidationComplete = true;
++			if (Boolean.FALSE.equals(result)) {
++				Log.w(TAG, "Incomplete, or corrupted encryption detected. Prompting user to wipe.");
++				mEncryptionGoneBad = true;
++			} else {
++				Log.d(TAG, "Encryption state validated. Proceeding to configure UI");
++			}
++			setupUi();
++		}
++	}
++
++	private final Handler mHandler = new Handler() {
++		@Override
++		public void handleMessage(Message msg) {
++			switch (msg.what) {
++			case UPDATE_PROGRESS:
++				updateProgress();
++				break;
++
++			case COOLDOWN:
++				cooldown();
++				break;
++			}
++		}
++	};
++
++
++
++	/**
++	 * @return whether or not this Activity was started for debugging the UI
++	 *         only.
++	 */
++	private boolean isDebugView() {
++		return getIntent().hasExtra(EXTRA_FORCE_VIEW);
++	}
++
++	/**
++	 * @return whether or not this Activity was started for debugging the
++	 *         specific UI view only.
++	 */
++	private boolean isDebugView(String viewType /* non-nullable */) {
++		return viewType.equals(getIntent().getStringExtra(EXTRA_FORCE_VIEW));
++	}
++
++	@Override
++	public void onCreate(Bundle savedInstanceState) {
++		super.onCreate(savedInstanceState);
++
++		// If we are not encrypted or encrypting, get out quickly.
++		String state = SystemProperties.get("vold.decrypt");
++		if (!isDebugView() && ("".equals(state) || DECRYPT_STATE.equals(state))) {
++			// Disable the crypt keeper.
++			PackageManager pm = getPackageManager();
++			ComponentName name = new ComponentName(this, CryptKeeper.class);
++			pm.setComponentEnabledSetting(name, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
++			// Typically CryptKeeper is launched as the home app. We didn't
++			// want to be running, so need to finish this activity. We can count
++			// on the activity manager re-launching the new home app upon
++			// finishing
++			// this one, since this will leave the activity stack empty.
++			// NOTE: This is really grungy. I think it would be better for the
++			// activity manager to explicitly launch the crypt keeper instead of
++			// home in the situation where we need to decrypt the device
++			finish();
++			return;
++		}
++
++		// Disable the status bar
++		StatusBarManager sbm = (StatusBarManager) getSystemService(Context.STATUS_BAR_SERVICE);
++		sbm.disable(StatusBarManager.DISABLE_EXPAND | StatusBarManager.DISABLE_NOTIFICATION_ICONS | StatusBarManager.DISABLE_NOTIFICATION_ALERTS
++				| StatusBarManager.DISABLE_SYSTEM_INFO | StatusBarManager.DISABLE_HOME | StatusBarManager.DISABLE_RECENT | StatusBarManager.DISABLE_BACK);
++
++		// Check for (and recover) retained instance data
++		Object lastInstance = getLastNonConfigurationInstance();
++		if (lastInstance instanceof NonConfigurationInstanceState) {
++			NonConfigurationInstanceState retained = (NonConfigurationInstanceState) lastInstance;
++			mWakeLock = retained.wakelock;
++			Log.d(TAG, "Restoring wakelock from NonConfigurationInstanceState");
++		}
++
++		// Get service
++		IBinder service = ServiceManager.getService("mount");
++		if (service == null) {
++			Log.e("NFC", "Could not find the mount service to update the encryption password");
++			return;
++		}
++
++		// Get mount service
++		mMountService = IMountService.Stub.asInterface(service);
++		if (mMountService != null) {
++			Log.i("NFC", "########### Found mount service");
++		} else {
++			Log.e("NFC", "Could not load mountserver");
++		}
++
++
++		//Get number of available keyslots
++		mKeySlots = getKeySlots();
++		if(mKeySlots <= 0)
++			mKeySlots=1;
++
++		//Get last slot description
++		String lastSlotDesc = getKeyDesc(mKeySlots-1);
++		Log.e("NFC", "lastSlotDesc: "+lastSlotDesc);
++		if(lastSlotDesc != null)
++		{
++			String[] splitted = lastSlotDesc.split(" ");
++			if(splitted != null && splitted.length >= 2)
++			{
++				try
++				{
++					String[] splitted2 = splitted[1].split("#");
++					for (int i = 0; i < splitted2.length; i++) {
++						Log.e("NFC", "Key "+(mKeySlots-1)+" desc: "+splitted2[i]);
++					}
++
++					mLastKeySlotType = Integer.valueOf(splitted2[0]);
++					Log.e("NFC", "mLastKeySlotType: "+mLastKeySlotType);
++					switch(mLastKeySlotType)
++					{
++					case 2:
++						//Force show pattern
++						showPattern();
++						break;
++					case 4:
++						//get key for accessing mifare card
++						mNFCAccessKeySlot = splitted2[1];
++						mNFCAccessKeyLength = splitted2[2];
++						mNFCAccessKey = splitted2[3];
++						break;
++					}
++				}catch(Exception e)
++				{
++					e.printStackTrace();
++				}
++			}
++		}
++	}
++
++	/**
++	 * Note, we defer the state check and screen setup to onStart() because this
++	 * will be re-run if the user clicks the power button (sleeping/waking the
++	 * screen), and this is especially important if we were to lose the wakelock
++	 * for any reason.
++	 */
++	@Override
++	public void onStart() {
++		super.onStart();
++
++		setupUi();
++	}
++
++	/**
++	 * Initializes the UI based on the current state of encryption. This is
++	 * idempotent - calling repeatedly will simply re-initialize the UI.
++	 */
++	private void setupUi() {
++		if (mEncryptionGoneBad || isDebugView(FORCE_VIEW_ERROR)) {
++			setContentView(R.layout.crypt_keeper_progress);
++			showFactoryReset();
++			return;
++		}
++
++		String progress = SystemProperties.get("vold.encrypt_progress");
++		if (!"".equals(progress) || isDebugView(FORCE_VIEW_PROGRESS)) {
++			setContentView(R.layout.crypt_keeper_progress);
++			encryptionProgressInit();
++		} else if (mValidationComplete) {
++			setContentView(R.layout.crypt_keeper_password_entry);
++			passwordEntryInit();
++		} else if (!mValidationRequested) {
++			// We're supposed to be encrypted, but no validation has been done.
++			new ValidationTask().execute((Void[]) null);
++			mValidationRequested = true;
++		}
++	}
++
++	@Override
++	public void onStop() {
++		super.onStop();
++
++		if (mNfcCryptKeeper != null)
++			mNfcCryptKeeper.stop();
++
++		mHandler.removeMessages(COOLDOWN);
++		mHandler.removeMessages(UPDATE_PROGRESS);
++	}
++
++	/**
++	 * Reconfiguring, so propagate the wakelock to the next instance. This runs
++	 * between onStop() and onDestroy() and only if we are changing
++	 * configuration (e.g. rotation). Also clears mWakeLock so the subsequent
++	 * call to onDestroy does not release it.
++	 */
++	@Override
++	public Object onRetainNonConfigurationInstance() {
++		NonConfigurationInstanceState state = new NonConfigurationInstanceState(mWakeLock);
++		Log.d(TAG, "Handing wakelock off to NonConfigurationInstanceState");
++		mWakeLock = null;
++		return state;
++	}
++
++	@Override
++	public void onDestroy() {
++		super.onDestroy();
++
++		if (mWakeLock != null) {
++			Log.d(TAG, "Releasing and destroying wakelock");
++			mWakeLock.release();
++			mWakeLock = null;
++		}
++	}
++
++	private void encryptionProgressInit() {
++		// Accquire a partial wakelock to prevent the device from sleeping. Note
++		// we never release this wakelock as we will be restarted after the
++		// device
++		// is encrypted.
++
++		Log.d(TAG, "Encryption progress screen initializing.");
++		if (mWakeLock == null) {
++			Log.d(TAG, "Acquiring wakelock.");
++			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
++			mWakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, TAG);
++			mWakeLock.acquire();
++		}
++
++		ProgressBar progressBar = (ProgressBar) findViewById(R.id.progress_bar);
++		progressBar.setIndeterminate(true);
++
++		updateProgress();
++	}
++
++	private void showFactoryReset() {
++		// Hide the encryption-bot to make room for the "factory reset" button
++		findViewById(R.id.encroid).setVisibility(View.GONE);
++
++		// Show the reset button, failure text, and a divider
++		Button button = (Button) findViewById(R.id.factory_reset);
++		button.setVisibility(View.VISIBLE);
++		button.setOnClickListener(new OnClickListener() {
++			public void onClick(View v) {
++				// Factory reset the device.
++				sendBroadcast(new Intent("android.intent.action.MASTER_CLEAR"));
++			}
++		});
++
++		TextView tv = (TextView) findViewById(R.id.title);
++		tv.setText(R.string.crypt_keeper_failed_title);
++
++		tv = (TextView) findViewById(R.id.status);
++		tv.setText(R.string.crypt_keeper_failed_summary);
++
++		View view = findViewById(R.id.bottom_divider);
++		if (view != null) {
++			view.setVisibility(View.VISIBLE);
++		}
++	}
++
++	private void updateProgress() {
++		String state = SystemProperties.get("vold.encrypt_progress");
++
++		if ("error_partially_encrypted".equals(state)) {
++			showFactoryReset();
++			return;
++		}
++
++		int progress = 0;
++		try {
++			// Force a 50% progress state when debugging the view.
++			progress = isDebugView() ? 50 : Integer.parseInt(state);
++		} catch (Exception e) {
++			Log.w(TAG, "Error parsing progress: " + e.toString());
++		}
++
++		CharSequence status = getText(R.string.crypt_keeper_setup_description);
++		Log.v(TAG, "Encryption progress: " + progress);
++		TextView tv = (TextView) findViewById(R.id.status);
++		tv.setText(TextUtils.expandTemplate(status, Integer.toString(progress)));
++
++		// Check the progress every 5 seconds
++		mHandler.removeMessages(UPDATE_PROGRESS);
++		mHandler.sendEmptyMessageDelayed(UPDATE_PROGRESS, 5000);
++	}
++
++	private void cooldown() {
++		TextView tv = (TextView) findViewById(R.id.status);
++
++		if (mCooldown <= 0) {
++			// Re-enable the password entry
++			mPasswordEntry.setEnabled(true);
++
++			tv.setVisibility(View.GONE);
++		} else {
++			CharSequence template = getText(R.string.crypt_keeper_cooldown);
++			tv.setText(TextUtils.expandTemplate(template, Integer.toString(mCooldown)));
++
++			tv.setVisibility(View.VISIBLE);
++
++			mCooldown--;
++			mHandler.removeMessages(COOLDOWN);
++			mHandler.sendEmptyMessageDelayed(COOLDOWN, 1000); // Tick every
++																// second
++		}
++	}
++
++	private void passwordEntryInit() {
++		mPasswordEntry = (EditText) findViewById(R.id.passwordEntry);
++		mPasswordEntry.setOnEditorActionListener(this);
++		mPasswordEntry.requestFocus();
++
++		View imeSwitcher = findViewById(R.id.switch_ime_button);
++		final InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
++		if (imeSwitcher != null && hasMultipleEnabledIMEsOrSubtypes(imm, false)) {
++			imeSwitcher.setVisibility(View.VISIBLE);
++			imeSwitcher.setOnClickListener(new OnClickListener() {
++				public void onClick(View v) {
++					imm.showInputMethodPicker();
++				}
++			});
++		}
++
++		// Asynchronously throw up the IME, since there are issues with
++		// requesting it to be shown
++		// immediately.
++		mHandler.postDelayed(new Runnable() {
++			@Override
++			public void run() {
++				imm.showSoftInputUnchecked(0, null);
++			}
++		}, 0);
++
++		updateEmergencyCallButtonState();
++
++	}
++
++	private String getKeyDesc(int slot) {
++		try {
++			if (mMountService != null) {
++				String desc = mMountService.keyDesc(""+slot);
++				Log.i("NFC", "key: "+slot+" desc:" + desc);
++				return desc;
++			} else {
++				Log.e("NFC", "MountService is null");
++			}
++		} catch (RemoteException e) {
++			Log.e("NFC", "Error get getKeyDesc ", e);
++		}
++		return null;
++	}
++
++
++	private int getKeySlots() {
++		try {
++			if (mMountService != null) {
++				int slots = mMountService.keySlots();
++				Log.i("NFC", "key slots used:" + slots);
++				return slots;
++			} else {
++				Log.e("NFC", "MountService is null");
++			}
++		} catch (RemoteException e) {
++			Log.e("NFC", "Error get keyslots ", e);
++		}
++		return -1;
++	}
++
++	private int getKeyTypes() {
++		try {
++			if (mMountService != null) {
++				int types = mMountService.keyTypes();
++				Log.i("NFC", "key types used:" + types);
++				return types;
++			} else {
++				Log.e("NFC", "MountService is null");
++			}
++		} catch (RemoteException e) {
++			Log.e("NFC", "Error get keytypes ", e);
++		}
++		return -1;
++	}
++
++	@Override
++	protected void onResume() {
++		super.onResume();
++		// Enable NFC Addon
++		if (mNfcCryptKeeper == null) {
++			Log.e("NFC", "Enable NFCCryptKeeper");
++			mNfcCryptKeeper = new NFCCryptKeeper(this);
++		}
++
++		if (mNfcCryptKeeper != null) {
++			mNfcCryptKeeper.enable();
++		}
++	}
++
++	@Override
++	protected void onPause() {
++		super.onPause();
++		if (mNfcCryptKeeper != null) {
++			mNfcCryptKeeper.disable();
++		}
++	}
++
++	@Override
++	public void onNewIntent(Intent intent) {
++		Log.i("NFC", "CryptKeeper.onNewIntent called with action:" + intent.getAction());
++		if (mNfcCryptKeeper != null && intent.getAction() != null && intent.getAction().equals("android.nfc.action.TAG_DISCOVERED")) {
++
++			String result = mNfcCryptKeeper.handleResult(intent, mNFCAccessKey, mNFCAccessKeySlot, mNFCAccessKeyLength, this);
++			Log.i("NFC", "NFCCryptKeeper Result: " + result);
++
++			//Only use id for encryption if last nfc key is not a mifare crypto key
++			if(mLastKeySlotType != 4)
++			{
++				nfcResult(result);
++			}
++		}
++	}
++
++	/**
++	 * Start encryption pogress with provided key
++	 */
++	public void nfcResult(String _key)
++	{
++		if (_key != null) {
++			// Try NFC key
++			new DecryptTask().execute(_key);
++		}
++	}
++
++	/**
++	 * Method adapted from com.android.inputmethod.latin.Utils
++	 *
++	 * @param imm
++	 *            The input method manager
++	 * @param shouldIncludeAuxiliarySubtypes
++	 * @return true if we have multiple IMEs to choose from
++	 */
++	private boolean hasMultipleEnabledIMEsOrSubtypes(InputMethodManager imm, final boolean shouldIncludeAuxiliarySubtypes) {
++		final List<InputMethodInfo> enabledImis = imm.getEnabledInputMethodList();
++
++		// Number of the filtered IMEs
++		int filteredImisCount = 0;
++
++		for (InputMethodInfo imi : enabledImis) {
++			// We can return true immediately after we find two or more filtered
++			// IMEs.
++			if (filteredImisCount > 1)
++				return true;
++			final List<InputMethodSubtype> subtypes = imm.getEnabledInputMethodSubtypeList(imi, true);
++			// IMEs that have no subtypes should be counted.
++			if (subtypes.isEmpty()) {
++				++filteredImisCount;
++				continue;
++			}
++
++			int auxCount = 0;
++			for (InputMethodSubtype subtype : subtypes) {
++				if (subtype.isAuxiliary()) {
++					++auxCount;
++				}
++			}
++			final int nonAuxCount = subtypes.size() - auxCount;
++
++			// IMEs that have one or more non-auxiliary subtypes should be
++			// counted.
++			// If shouldIncludeAuxiliarySubtypes is true, IMEs that have two or
++			// more auxiliary
++			// subtypes should be counted as well.
++			if (nonAuxCount > 0 || (shouldIncludeAuxiliarySubtypes && auxCount > 1)) {
++				++filteredImisCount;
++				continue;
++			}
++		}
++
++		return filteredImisCount > 1
++		// imm.getEnabledInputMethodSubtypeList(null, false) will return the
++		// current IME's enabled
++		// input method subtype (The current IME should be LatinIME.)
++				|| imm.getEnabledInputMethodSubtypeList(null, false).size() > 1;
++	}
++
++	private IMountService getMountService() {
++		IBinder service = ServiceManager.getService("mount");
++		if (service != null) {
++			return IMountService.Stub.asInterface(service);
++		}
++		return null;
++	}
++
++	@Override
++	public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
++		if (actionId == EditorInfo.IME_NULL || actionId == EditorInfo.IME_ACTION_DONE) {
++			// Get the password
++			String password = v.getText().toString();
++
++			if (TextUtils.isEmpty(password)) {
++				return true;
++			}
++
++			// Now that we have the password clear the password field.
++			v.setText(null);
++
++			// Disable the password entry while checking the password. This
++			// we either be reenabled if the password was wrong or after the
++			// cooldown period.
++			mPasswordEntry.setEnabled(false);
++
++			Log.d(TAG, "Attempting to send command to decrypt");
++			new DecryptTask().execute(password);
++
++			return true;
++		}
++		return false;
++	}
++
++	//
++	// Code to update the state of, and handle clicks from, the "Emergency call"
++	// button.
++	//
++	// This code is mostly duplicated from the corresponding code in
++	// LockPatternUtils and LockPatternKeyguardView under frameworks/base.
++	//
++
++	@Override
++	public void onActivityResult(int requestCode, int resultCode, Intent data) {
++		super.onActivityResult(requestCode, resultCode, data);
++		if (requestCode == LOCK_PATTERN && resultCode == 101) {
++			// Got pattern pasword
++			String password = data.getStringExtra("pattern");
++			if (password != null) {
++				// Try NFC key
++				new DecryptTask().execute(password);
++			}
++		}
++	}
++
++	private void showPattern()
++	{
++		Intent intent = new Intent();
++		intent.setClass(CryptKeeper.this, ChooseLockPattern.class);
++		intent.putExtra("key_lock_method", "pattern");
++		intent.putExtra("confirm_credentials", true);
++		intent.putExtra("return_lock_pattern", true);
++		intent.putExtra("only_convirm", true);
++		intent.putExtra(LockPatternUtils.LOCKSCREEN_BIOMETRIC_WEAK_FALLBACK, false);
++		CryptKeeper.this.startActivityForResult(intent, LOCK_PATTERN );
++	}
++
++	private void updateEmergencyCallButtonState() {
++		Button buttonPattern = (Button) findViewById(R.id.patternButton);
++		if(buttonPattern != null)
++		{
++			buttonPattern.setVisibility(View.VISIBLE);
++			buttonPattern.setOnClickListener(new View.OnClickListener() {
++				public void onClick(View v) {
++					showPattern();
++				}
++			});
++		}
++
++		Button button = (Button) findViewById(R.id.emergencyCallButton);
++		// The button isn't present at all in some configurations.
++		if (button == null)
++			return;
++
++		if (isEmergencyCallCapable()) {
++			button.setVisibility(View.VISIBLE);
++			button.setOnClickListener(new View.OnClickListener() {
++				public void onClick(View v) {
++					takeEmergencyCallAction();
++				}
++			});
++		} else {
++			button.setVisibility(View.GONE);
++			return;
++		}
++
++		int newState = TelephonyManager.getDefault().getCallState();
++		int textId;
++		if (newState == TelephonyManager.CALL_STATE_OFFHOOK) {
++			// show "return to call" text and show phone icon
++			textId = R.string.cryptkeeper_return_to_call;
++			int phoneCallIcon = R.drawable.stat_sys_phone_call;
++			button.setCompoundDrawablesWithIntrinsicBounds(phoneCallIcon, 0, 0, 0);
++		} else {
++			textId = R.string.cryptkeeper_emergency_call;
++			int emergencyIcon = R.drawable.ic_emergency;
++			button.setCompoundDrawablesWithIntrinsicBounds(emergencyIcon, 0, 0, 0);
++		}
++		button.setText(textId);
++	}
++
++	private boolean isEmergencyCallCapable() {
++		return getResources().getBoolean(com.android.internal.R.bool.config_voice_capable);
++	}
++
++	private void takeEmergencyCallAction() {
++		if (TelephonyManager.getDefault().getCallState() == TelephonyManager.CALL_STATE_OFFHOOK) {
++			resumeCall();
++		} else {
++			launchEmergencyDialer();
++		}
++	}
++
++	private void resumeCall() {
++		ITelephony phone = ITelephony.Stub.asInterface(ServiceManager.checkService("phone"));
++		if (phone != null) {
++			try {
++				phone.showCallScreen();
++			} catch (RemoteException e) {
++				Log.e(TAG, "Error calling ITelephony service: " + e);
++			}
++		}
++	}
++
++	private void launchEmergencyDialer() {
++		Intent intent = new Intent(ACTION_EMERGENCY_DIAL);
++		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
++		startActivity(intent);
++	}
+ }
+diff --git a/src/com/android/settings/CryptKeeperSettings.java b/src/com/android/settings/CryptKeeperSettings.java
+index 41a4be5..d53f145 100644
+--- a/src/com/android/settings/CryptKeeperSettings.java
++++ b/src/com/android/settings/CryptKeeperSettings.java
+@@ -48,7 +48,7 @@ public class CryptKeeperSettings extends Fragment {
+ 
+     // Minimum battery charge level (in percent) to launch encryption.  If the battery charge is
+     // lower than this, encryption should not be activated.
+-    private static final int MIN_BATTERY_LEVEL = 80;
++    private static final int MIN_BATTERY_LEVEL = 30;//80;//TODO undo
+ 
+     private View mContentView;
+     private Button mInitiateButton;
+diff --git a/src/com/android/settings/SecuritySettings.java b/src/com/android/settings/SecuritySettings.java
+index f788c2a..29e44f8 100644
+--- a/src/com/android/settings/SecuritySettings.java
++++ b/src/com/android/settings/SecuritySettings.java
+@@ -26,6 +26,7 @@ import android.os.Bundle;
+ import android.preference.CheckBoxPreference;
+ import android.preference.Preference;
+ import android.preference.Preference.OnPreferenceChangeListener;
++import android.preference.Preference.OnPreferenceClickListener;
+ import android.preference.PreferenceScreen;
+ import android.provider.Settings;
+ import android.security.KeyStore;
+@@ -74,6 +75,7 @@ public class SecuritySettings extends SettingsPreferenceFragment
+         case DevicePolicyManager.ENCRYPTION_STATUS_ACTIVE:
+             // The device is currently encrypted.
+             addPreferencesFromResource(R.xml.security_settings_encrypted);
++            initKeySlotManager();
+             break;
+         case DevicePolicyManager.ENCRYPTION_STATUS_INACTIVE:
+             // This device supports encryption but isn't encrypted.
+@@ -103,6 +105,24 @@ public class SecuritySettings extends SettingsPreferenceFragment
+ 
+         return root;
+     }
++    
++    private void initKeySlotManager()
++    {
++      	final PreferenceScreen root = getPreferenceScreen();
++      	Preference buttonChangePW = root.findPreference("keyslot_manager");
++      	buttonChangePW.setEnabled(true);
++      	buttonChangePW.setOnPreferenceClickListener(new OnPreferenceClickListener()
++  		{
++  			@Override
++  			public boolean onPreferenceClick(Preference preference)
++  			{
++  				Intent i = new Intent(root.getContext(), CryptKeeperChangePassword.class);
++  				root.getContext().startActivity(i);
++  				//startFragment(SecuritySettings.this, "com.android.settings.CryptKeeperChangePassword$CryptKeeperChangePasswordFragment", 0, null);
++  				return true;
++  			}
++  		});
++    }
+ 
+     private boolean isNonMarketAppsAllowed() {
+         return Settings.Secure.getInt(getContentResolver(),
+@@ -158,6 +178,11 @@ public class SecuritySettings extends SettingsPreferenceFragment
+     @Override
+     public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
+         final String key = preference.getKey();
++        
++        if (KEY_KEYSLOTMANAGER.equals(key)) {
++            startFragment(this, "com.android.settings.CryptKeeperChangePassword$CryptKeeperChangePasswordFragment", 0, null);
++            return true;
++        } 
+ 
+         if (preference == mShowPassword) {
+             Settings.System.putInt(getContentResolver(), Settings.System.TEXT_SHOW_PASSWORD,
+@@ -173,6 +198,7 @@ public class SecuritySettings extends SettingsPreferenceFragment
+             // If we didn't handle it, let preferences handle it.
+             return super.onPreferenceTreeClick(preferenceScreen, preference);
+         }
++        
+ 
+         return true;
+     }
+@@ -189,4 +215,6 @@ public class SecuritySettings extends SettingsPreferenceFragment
+     public boolean onPreferenceChange(Preference preference, Object value) {
+         return true;
+     }
++    
++    private static final String KEY_KEYSLOTMANAGER = "keyslot_manager";
+ }
+diff --git a/src/com/android/settings/cyanogenmod/StatusBar.java b/src/com/android/settings/cyanogenmod/StatusBar.java
+old mode 100644
+new mode 100755
+index 464eca6..5a4753c
+--- a/src/com/android/settings/cyanogenmod/StatusBar.java
++++ b/src/com/android/settings/cyanogenmod/StatusBar.java
+@@ -78,17 +78,7 @@ public class StatusBar extends SettingsPreferenceFragment implements OnPreferenc
+ 
+         mStatusBarClock.setChecked((Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(),
+                 Settings.System.STATUS_BAR_CLOCK, 1) == 1));
+-        mStatusBarBrightnessControl.setChecked((Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(),
+-                Settings.System.STATUS_BAR_BRIGHTNESS_TOGGLE, 0) == 1));
+-
+-        try {
+-            if (Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(), 
+-                    Settings.System.SCREEN_BRIGHTNESS_MODE) == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC) {
+-                mStatusBarBrightnessControl.setEnabled(false);
+-                mStatusBarBrightnessControl.setSummary(R.string.status_bar_toggle_info);
+-            }
+-        } catch (SettingNotFoundException e) {
+-        }
++        
+ 
+         int statusBarAmPm = Settings.System.getInt(getActivity().getApplicationContext().getContentResolver(),
+                 Settings.System.STATUS_BAR_AM_PM, 2);
+@@ -144,7 +134,7 @@ public class StatusBar extends SettingsPreferenceFragment implements OnPreferenc
+             return true;
+         } else if (preference == mStatusBarBrightnessControl) {
+             value = mStatusBarBrightnessControl.isChecked();
+-            Settings.System.putInt(getActivity().getApplicationContext().getContentResolver(), Settings.System.STATUS_BAR_BRIGHTNESS_TOGGLE, value ? 1 : 0);
++
+             return true;
+         } else if (preference == mCombinedBarAutoHide) {
+             value = mCombinedBarAutoHide.isChecked();

@@ -1,0 +1,115 @@
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index b896e07..94a1523 100755
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -1,6 +1,7 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+         package="com.android.nfc"
++	coreApp="true"
+         android:sharedUserId="android.uid.nfc"
+         android:sharedUserLabel="@string/nfcUserLabel"
+ >
+diff --git a/src/com/android/nfc/NfcService.java b/src/com/android/nfc/NfcService.java
+index 3f219a1..3809703 100755
+--- a/src/com/android/nfc/NfcService.java
++++ b/src/com/android/nfc/NfcService.java
+@@ -66,6 +66,7 @@ import android.os.ServiceManager;
+ import android.provider.Settings;
+ import android.util.Log;
+ 
++import android.os.SystemProperties;
+ import java.io.FileDescriptor;
+ import java.io.IOException;
+ import java.io.PrintWriter;
+@@ -88,7 +89,7 @@ public class NfcService extends Application implements DeviceHostListener {
+     private static final String NFC_PERM_ERROR = "NFC permission required";
+ 
+     /** NFC ADMIN permission - only for system apps */
+-    private static final String ADMIN_PERM = android.Manifest.permission.WRITE_SECURE_SETTINGS;
++    private static final String ADMIN_PERM = android.Manifest.permission.NFC;
+     private static final String ADMIN_PERM_ERROR = "WRITE_SECURE_SETTINGS permission required";
+ 
+     public static final String PREF = "NfcServicePrefs";
+@@ -132,6 +133,7 @@ public class NfcService extends Application implements DeviceHostListener {
+ 
+     /** minimum screen state that enables NFC polling (discovery) */
+     static final int POLLING_MODE = SCREEN_STATE_ON_UNLOCKED;
++//    static final int POLLING_MODE = SCREEN_STATE_ON_LOCKED;
+ 
+     // for use with playSound()
+     public static final int SOUND_START = 0;
+@@ -389,13 +391,35 @@ public class NfcService extends Application implements DeviceHostListener {
+             filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+         }
+     }
+-
+-    int checkScreenState() {
+-        if (!mPowerManager.isScreenOn()) {
+-            return SCREEN_STATE_OFF;
+-        } else if (mKeyguard.isKeyguardLocked()) {
++    
++    boolean isDecryptionMode()
++    {
++    	boolean rv = false;
++    	String state = SystemProperties.get("vold.decrypt");
++    	if(state != null && state.equals("1"))
++		{ 
++    		rv = true;
++		}
++    	Log.e(TAG,"NFC -> vold.decrypt is -> "+state+" return ->"+rv);
++    	return rv;
++    }
++    
++    int checkScreenState() 
++    {
++    	if (!mPowerManager.isScreenOn()) {
++    		return SCREEN_STATE_OFF;
++    	}
++    	else if(isDecryptionMode())
++		{
++    		//NFC should always run when 
++    		Log.e(TAG,"Force NFC-C ON in decript mode!");
++    		return SCREEN_STATE_ON_UNLOCKED;
++		}
++    	else if (mKeyguard.isKeyguardLocked()) 
++    	{
+             return SCREEN_STATE_ON_LOCKED;
+-        } else {
++        } else 
++        {
+             return SCREEN_STATE_ON_UNLOCKED;
+         }
+     }
+@@ -719,6 +743,8 @@ public class NfcService extends Application implements DeviceHostListener {
+             // Short-cut the disable path
+             if (intent == null && filters == null && techListsParcel == null) {
+                 mNfcDispatcher.setForegroundDispatch(null, null, null);
++                mDeviceHost.disableCE_A();
++                mDeviceHost.disableCE_B();
+                 return;
+             }
+ 
+@@ -1814,13 +1840,17 @@ public class NfcService extends Application implements DeviceHostListener {
+                 // Perform applyRouting() in AsyncTask to serialize blocking calls
+                 int screenState = SCREEN_STATE_OFF;
+                 if (action.equals(Intent.ACTION_SCREEN_OFF)) {
+-                    screenState = SCREEN_STATE_OFF;
++                	screenState = SCREEN_STATE_OFF;
++                } else if(isDecryptionMode()) {
++            		Log.e(TAG,"Force NFC-C ON in decript mode!");
++            		screenState = SCREEN_STATE_ON_UNLOCKED;
+                 } else if (action.equals(Intent.ACTION_SCREEN_ON)) {
+-                    screenState = mKeyguard.isKeyguardLocked() ?
+-                            SCREEN_STATE_ON_LOCKED : SCREEN_STATE_ON_UNLOCKED;
++                	screenState = mKeyguard.isKeyguardLocked() ?
++                			SCREEN_STATE_ON_LOCKED : SCREEN_STATE_ON_UNLOCKED;
+                 } else if (action.equals(Intent.ACTION_USER_PRESENT)) {
+-                    screenState = SCREEN_STATE_ON_UNLOCKED;
+-                }
++                	screenState = SCREEN_STATE_ON_UNLOCKED;
++                } 
++                
+                 new ApplyRoutingTask().execute(Integer.valueOf(screenState));
+             } else if (action.equals(ACTION_MASTER_CLEAR_NOTIFICATION)) {
+                 EnableDisableTask eeWipeTask = new EnableDisableTask();
